@@ -1,0 +1,26 @@
+{
+  "name": "get-fluent-now",
+  "version": "1.0.0",
+  "description": "Browser-based language learning app using Google Gemini API",
+  "main": "index.html",
+  "scripts": {
+    "start": "python3 -m http.server 8000",
+    "serve": "python3 -m http.server 8000",
+    "lint": "echo 'HTML validation can be done at: https://validator.w3.org/'",
+    "validate": "echo 'Use browser dev tools to check for console errors'"
+  },
+  "keywords": [
+    "language-learning",
+    "ai",
+    "google-gemini",
+    "translation-practice",
+    "frontend-only",
+    "single-page-app"
+  ],
+  "author": "Get Fluent Now Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "."
+  }
+}

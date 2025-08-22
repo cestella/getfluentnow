@@ -1,0 +1,2650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Get Fluent Now - AI Language Learning</title>
+    <!-- Marked.js for markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@12.0.0/marked.min.js"></script>
+    <script>
+
+        /**
+         * Polyglot Language Learning App
+         * Powered by Gemini API for story generation and translation assistance
+         */
+        
+        /**
+         * Main application class for Get Fluent Now language learning app
+         */
+        class LanguageLearningApp {
+            constructor() {
+                this.currentStory = null;           // Currently generated story text
+                this.currentTranslation = null;     // AI-generated reference translation
+                this.sourceLanguage = 'English';    // Source language for stories
+                this.targetLanguage = 'Spanish';    // Target language for translation
+                this.apiKey = null;                  // User's Gemini API key
+                this.chatContext = null;             // Chat conversation context
+                this.selectedModel = 'flash-lite';   // Default to Gemini Flash 8B
+            }
+
+            /**
+             * Initialize the application - check for saved API key and set up UI
+             */
+            async initialize() {
+                console.log('🚀 Initializing Get Fluent Now App...');
+                
+                // Check for stored API key and auto-validate if present
+                const storedApiKey = localStorage.getItem('gemini_api_key');
+                if (storedApiKey) {
+                    document.getElementById('gemini-api-key').value = storedApiKey;
+                    await this.validateApiKey();
+                } else {
+                    document.getElementById('status').textContent = '🔑 Please enter your Gemini API key to enable AI chat';
+                }
+                
+                // Show app controls immediately (no model loading required)
+                document.getElementById('app-controls').style.display = 'block';
+            }
+
+            getModelEndpoint() {
+                const modelMap = {
+                    'flash': 'gemini-1.5-flash',
+                    'flash-lite': 'gemini-1.5-flash-8b',
+                    'pro': 'gemini-1.5-pro'
+                };
+                return modelMap[this.selectedModel] || 'gemini-1.5-flash';
+            }
+
+            setModel(modelType) {
+                this.selectedModel = modelType;
+                console.log(`🔄 Model changed to: ${this.getModelEndpoint()}`);
+                
+                // Update UI to show selected model
+                document.querySelectorAll('.model-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                document.getElementById(`model-${modelType}`).classList.add('active');
+            }
+
+            async validateApiKey() {
+                const apiKey = document.getElementById('gemini-api-key').value.trim();
+                const statusDiv = document.getElementById('api-status');
+                const validateBtn = document.getElementById('validate-key-btn');
+                
+                if (!apiKey) {
+                    statusDiv.innerHTML = '❌ Please enter an API key';
+                    return false;
+                }
+                
+                validateBtn.disabled = true;
+                validateBtn.textContent = 'Validating...';
+                statusDiv.innerHTML = '⏳ Validating API key...';
+                
+                try {
+                    console.log(`🌐 GEMINI REQUEST [API Validation] - Model: ${this.getModelEndpoint()}, Prompt: "Hello"`);
+                    // Test API key with a simple request using current model
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${this.getModelEndpoint()}:generateContent?key=${apiKey}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            contents: [{
+                                parts: [{ text: 'Hello' }]
+                            }]
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        console.log('✅ GEMINI RESPONSE [API Validation] - SUCCESS');
+                        // Store API key
+                        localStorage.setItem('gemini_api_key', apiKey);
+                        this.apiKey = apiKey;
+                        
+                        statusDiv.innerHTML = '✅ API key validated successfully!';
+                        document.getElementById('status').textContent = `🤖 Gemini AI ready for translation assistance! Using: ${this.getModelEndpoint()}`;
+                        
+                        validateBtn.textContent = 'Valid ✓';
+                        validateBtn.style.background = '#28a745';
+                        return true;
+                    } else {
+                        throw new Error(`API validation failed: ${response.status}`);
+                    }
+                } catch (error) {
+                    console.error('🔴 GEMINI ERROR [API Validation]:', error);
+                    statusDiv.innerHTML = '❌ Invalid API key. Please check and try again.';
+                    return false;
+                } finally {
+                    if (!this.apiKey) {
+                        validateBtn.disabled = false;
+                        validateBtn.textContent = 'Validate';
+                    }
+                }
+            }
+
+
+
+
+
+
+            /**
+             * Generate a new story using Gemini API based on user preferences
+             */
+            async generateStory() {
+                if (!this.apiKey) {
+                    alert('Please validate your Gemini API key first!');
+                    return;
+                }
+                
+                try {
+                    console.log('🤖 Generating AI story with Gemini...');
+                    const storyLang = document.getElementById('story-language').value;
+                    const themeSelect = document.getElementById('story-theme').value;
+                    const customTheme = document.getElementById('custom-theme').value;
+                    const cefrLevel = document.getElementById('cefr-level').value;
+                    
+                    // Use custom theme if provided, otherwise use selected theme
+                    const theme = themeSelect === 'custom' ? customTheme : themeSelect;
+                    
+                    // Validate custom theme
+                    if (themeSelect === 'custom' && !customTheme.trim()) {
+                        alert('Please enter a custom theme or select a preset theme.');
+                        document.getElementById('generateBtn').disabled = false;
+                        return;
+                    }
+                    
+                    console.log('📊 Parameters:', { storyLang, theme, cefrLevel });
+                    
+                    document.getElementById('generateBtn').disabled = true;
+                    document.getElementById('story-output').textContent = '🤖 AI is generating your story...';
+
+                    // Create prompt for story generation with variation
+                    const languageNames = {
+                        'spanish': 'Spanish',
+                        'italian': 'Italian', 
+                        'french': 'French',
+                        'english': 'English'
+                    };
+                    
+                    // Add variety to story generation
+                    const storyVariants = {
+                        travel: [
+                            "a surprising discovery during a trip",
+                            "meeting someone unexpected while traveling", 
+                            "getting lost and finding something amazing",
+                            "a cultural misunderstanding that turns into friendship",
+                            "missing a train/bus that leads to an adventure",
+                            "trying local food for the first time",
+                            "exploring a historic place with a guide"
+                        ],
+                        food: [
+                            "cooking with family for a special occasion",
+                            "discovering a new favorite dish by accident",
+                            "shopping at a local market for ingredients",
+                            "learning a family recipe from grandmother",
+                            "trying to recreate a restaurant dish at home",
+                            "sharing a meal with new neighbors",
+                            "a cooking disaster that becomes a funny memory"
+                        ],
+                        family: [
+                            "planning a surprise for a family member",
+                            "three generations working together on a project",
+                            "siblings with different personalities helping each other",
+                            "a family pet causing chaos but bringing joy",
+                            "moving to a new home and adjusting together",
+                            "celebrating a milestone or achievement",
+                            "resolving a small conflict through understanding"
+                        ],
+                        work: [
+                            "the first day at a new job",
+                            "helping a colleague solve a difficult problem", 
+                            "adapting when technology changes at work",
+                            "organizing a team event or celebration",
+                            "learning a new skill from a mentor",
+                            "dealing with a challenging customer positively",
+                            "collaborating with people from different backgrounds"
+                        ],
+                        culture: [
+                            "participating in a traditional festival for the first time",
+                            "learning about local customs from an elder",
+                            "bridging generational differences through shared activities",
+                            "discovering hidden meaning in a cultural tradition",
+                            "teaching someone about your own culture",
+                            "finding commonalities across different cultures",
+                            "preserving an old tradition in a modern setting"
+                        ],
+                        nature: [
+                            "observing wildlife behavior in an unexpected place",
+                            "planting a garden and watching it grow over time",
+                            "protecting a local natural area with community help",
+                            "discovering how weather affects daily life",
+                            "finding beauty in a changing season",
+                            "learning about local plants and their uses",
+                            "experiencing nature's power and resilience"
+                        ],
+                        technology: [
+                            "an elderly person learning to use new technology",
+                            "solving a problem using a creative technological solution",
+                            "children teaching adults about digital tools",
+                            "technology bringing distant friends closer together",
+                            "choosing traditional methods over digital ones",
+                            "discovering an unexpected use for a common device",
+                            "technology helping someone pursue their passion"
+                        ],
+                        health: [
+                            "discovering a new way to stay active and healthy",
+                            "supporting a friend through a health challenge",
+                            "changing daily habits for better wellbeing",
+                            "finding balance between work and personal health",
+                            "learning about traditional health practices",
+                            "overcoming a fear related to health or medical care",
+                            "celebrating small improvements in health or fitness"
+                        ]
+                    };
+                    
+                    // Get random variant or use custom theme
+                    const storyPrompt = theme === themeSelect ? 
+                        (storyVariants[theme] ? storyVariants[theme][Math.floor(Math.random() * storyVariants[theme].length)] : theme) : 
+                        theme;
+                    
+                    // Add random elements for more variety (using timestamp for additional randomness)
+                    const now = Date.now();
+                    const timeSettings = ['morning', 'afternoon', 'evening', 'weekend', 'holiday', 'weekday'];
+                    const emotions = ['excited', 'curious', 'determined', 'hopeful', 'surprised', 'content', 'nervous', 'confident'];
+                    const locations = ['city', 'countryside', 'seaside', 'mountains', 'neighborhood', 'downtown', 'suburbs'];
+                    const seasons = ['spring', 'summer', 'autumn', 'winter'];
+                    
+                    const timeSetting = timeSettings[now % timeSettings.length];
+                    const emotion = emotions[(now * 7) % emotions.length];
+                    const location = locations[(now * 13) % locations.length];
+                    const season = seasons[(now * 17) % seasons.length];
+                    
+                    // Add unique identifier to make each generation different
+                    const uniqueId = Math.floor(now / 1000) % 10000;
+                    
+                    const prompt = `Write a short story in ${languageNames[storyLang]} about ${storyPrompt}. Make it appropriate for ${cefrLevel.toUpperCase()} CEFR level learners.
+
+Setting context: This happens during a ${timeSetting} in ${season}, in a ${location} setting. The main character feels ${emotion} about the situation. Story ID: ${uniqueId}
+
+Write one paragraph that represents language level appropriate concepts with culturally appropriate context for ${languageNames[storyLang]} speakers. Make this story unique and creative - avoid common or repetitive scenarios. The story should be engaging, use vocabulary appropriate for the level, and include cultural elements that would be familiar to native speakers. Write ONLY the story, nothing else.`;
+                    
+                    console.log('🤖 Story Generation Prompt:', prompt);
+                    console.log(`🌐 GEMINI REQUEST [Story Generation] - Model: ${this.getModelEndpoint()}, Temp: ${0.7 + (Math.random() * 0.4)}, Length: ${prompt.length} chars`);
+                    
+                    // Call Gemini API
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${this.getModelEndpoint()}:generateContent?key=${this.apiKey}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            contents: [{
+                                parts: [{ text: prompt }]
+                            }],
+                            generationConfig: {
+                                temperature: 0.7 + (Math.random() * 0.4), // Random between 0.7-1.1
+                                topP: 0.8 + (Math.random() * 0.2), // Random between 0.8-1.0
+                            }
+                        })
+                    });
+
+                    if (response.ok) {
+                        console.log('✅ GEMINI RESPONSE [Story Generation] - SUCCESS');
+                        const data = await response.json();
+                        const story = data.candidates[0].content.parts[0].text.trim();
+                        
+                        console.log('✅ Generated story:', story);
+                        
+                        // Store the story
+                        this.currentStory = story;
+                        this.storyLanguage = storyLang;
+                        this.translationLanguage = document.getElementById('translation-language').value;
+                        
+                        // Display the story
+                        document.getElementById('story-output').textContent = story;
+                        
+                        // Show the translation section and buttons
+                        document.getElementById('translation-section').style.display = 'block';
+                        document.getElementById('showTranslationBtn').style.display = 'inline-block';
+                        document.getElementById('rateTranslationBtn').style.display = 'inline-block';
+                        
+                        // Show the chat widget
+                        document.getElementById('chatWidget').style.display = 'block';
+                        
+                    } else {
+                        throw new Error(`Story generation failed: ${response.status}`);
+                    }
+                    
+                } catch (error) {
+                    console.error('🔴 GEMINI ERROR [Story Generation]:', error);
+                    document.getElementById('story-output').textContent = 'Error generating story. Please check your API key and try again.';
+                } finally {
+                    document.getElementById('generateBtn').disabled = false;
+                }
+            }
+
+
+
+
+
+
+
+            resetExercise() {
+                this.currentStory = null;
+                this.currentTranslation = null;
+                this.storyLanguage = null;
+                this.translationLanguage = null;
+                this.chatContext = null;
+                document.getElementById('story-output').textContent = '';
+                document.getElementById('translation-input').value = '';
+                document.getElementById('feedback').innerHTML = '';
+                document.getElementById('mini-lesson').innerHTML = '';
+                document.getElementById('translation-section').style.display = 'none';
+                document.getElementById('showTranslationBtn').style.display = 'none';
+                document.getElementById('rateTranslationBtn').style.display = 'none';
+                document.getElementById('generateLessonBtn').style.display = 'none';
+                document.getElementById('feedback-tabs').style.display = 'none';
+                document.getElementById('chatWidget').style.display = 'none';
+                document.getElementById('chatMessages').innerHTML = '';
+                document.getElementById('chatContextBar').style.display = 'none';
+            }
+
+            async showTranslation() {
+                if (!this.apiKey) {
+                    alert('Please validate your Gemini API key first!');
+                    return;
+                }
+                
+                if (!this.currentStory) {
+                    alert('Please generate a story first!');
+                    return;
+                }
+                
+                // If we already have the translation, just show it
+                if (this.currentTranslation) {
+                    this.displayBothVersions();
+                    return;
+                }
+                
+                try {
+                    document.getElementById('showTranslationBtn').disabled = true;
+                    document.getElementById('showTranslationBtn').textContent = 'Translating...';
+                    
+                    const languageNames = {
+                        'spanish': 'Spanish',
+                        'italian': 'Italian', 
+                        'french': 'French',
+                        'english': 'English'
+                    };
+                    
+                    const fromLang = languageNames[this.storyLanguage];
+                    const toLang = languageNames[this.translationLanguage];
+                    
+                    const prompt = `Translate this ${fromLang} text to ${toLang}. Provide ONLY the translation, nothing else:
+
+${this.currentStory}`;
+
+                    console.log('🔄 Translation Prompt:', prompt);
+                    console.log(`🌐 GEMINI REQUEST [Translation] - Model: ${this.getModelEndpoint()}, From: ${fromLang}, To: ${toLang}`);
+
+                    // Call Gemini API for translation
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${this.getModelEndpoint()}:generateContent?key=${this.apiKey}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            contents: [{
+                                parts: [{ text: prompt }]
+                            }],
+                            generationConfig: {
+                                temperature: 0.3,
+                            }
+                        })
+                    });
+
+                    if (response.ok) {
+                        console.log('✅ GEMINI RESPONSE [Translation] - SUCCESS');
+                        const data = await response.json();
+                        const translation = data.candidates[0].content.parts[0].text.trim();
+                        
+                        this.currentTranslation = translation;
+                        this.displayBothVersions();
+                        
+                    } else {
+                        throw new Error(`Translation failed: ${response.status}`);
+                    }
+                    
+                } catch (error) {
+                    console.error('🔴 GEMINI ERROR [Translation]:', error);
+                    alert('Error generating translation. Please try again.');
+                } finally {
+                    document.getElementById('showTranslationBtn').disabled = false;
+                    document.getElementById('showTranslationBtn').textContent = 'Show Translation';
+                }
+            }
+
+            displayBothVersions() {
+                const languageNames = {
+                    'spanish': 'Spanish',
+                    'italian': 'Italian', 
+                    'french': 'French',
+                    'english': 'English'
+                };
+                
+                const storyOutput = document.getElementById('story-output');
+                storyOutput.innerHTML = `
+                    <div style="margin-bottom: 15px;">
+                        <strong>Original (${languageNames[this.storyLanguage]}):</strong><br>
+                        ${this.currentStory}
+                    </div>
+                    <div>
+                        <strong>Translation (${languageNames[this.translationLanguage]}):</strong><br>
+                        ${this.currentTranslation}
+                    </div>
+                `;
+                
+                // Hide the "Show Translation" button after showing
+                document.getElementById('showTranslationBtn').style.display = 'none';
+            }
+
+            handleThemeChange() {
+                const themeSelect = document.getElementById('story-theme');
+                const customInput = document.getElementById('custom-theme');
+                
+                if (themeSelect.value === 'custom') {
+                    customInput.style.display = 'block';
+                    customInput.focus();
+                } else {
+                    customInput.style.display = 'none';
+                    customInput.value = '';
+                }
+            }
+
+            swapLanguages() {
+                const storyLangSelect = document.getElementById('story-language');
+                const translationLangSelect = document.getElementById('translation-language');
+                
+                const tempValue = storyLangSelect.value;
+                storyLangSelect.value = translationLangSelect.value;
+                translationLangSelect.value = tempValue;
+                
+                this.resetExercise();
+            }
+
+            /**
+             * Rate user's translation using Gemini AI with detailed markdown feedback
+             */
+            async rateTranslation() {
+                if (!this.apiKey) {
+                    alert('Please validate your Gemini API key first!');
+                    return;
+                }
+                
+                const userTranslation = document.getElementById('translation-input').value.trim();
+                if (!userTranslation) {
+                    alert('Please enter your translation first!');
+                    return;
+                }
+                
+                if (!this.currentStory) {
+                    alert('Please generate a story first!');
+                    return;
+                }
+                
+                try {
+                    document.getElementById('rateTranslationBtn').disabled = true;
+                    document.getElementById('feedback').innerHTML = '<strong>🤖 AI is evaluating your translation...</strong>';
+                    
+                    const languageNames = {
+                        'spanish': 'Spanish',
+                        'italian': 'Italian', 
+                        'french': 'French',
+                        'english': 'English'
+                    };
+                    
+                    const fromLang = languageNames[this.storyLanguage];
+                    const toLang = languageNames[this.translationLanguage];
+                    
+                    const prompt = `You are an experienced language teacher. Rate this translation from ${fromLang} to ${toLang}:
+
+**Original ${fromLang}:** "${this.currentStory}"
+**Student's ${toLang} translation:** "${userTranslation}"
+
+Please provide your evaluation in markdown format with:
+
+## Score: X/10
+
+### ✅ What You Did Well:
+- [Specific positive points about the translation]
+
+### 📈 Areas for Improvement:
+- [Specific errors or areas that need work]
+
+### 💡 Suggested Translation:
+"[Your improved version here]"
+
+### 📚 Key Learning Points:
+- [Important grammar rules, vocabulary notes, or cultural insights]
+
+Be encouraging but constructive. Keep each section concise (2-3 points maximum).`;
+
+                    console.log('📝 Translation Rating Prompt:', prompt);
+
+                    // Call Gemini API
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${this.getModelEndpoint()}:generateContent?key=${this.apiKey}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            contents: [{
+                                parts: [{ text: prompt }]
+                            }],
+                            generationConfig: {
+                                temperature: 0.7,
+                            }
+                        })
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        const feedback = data.candidates[0].content.parts[0].text.trim();
+                        
+                        // Parse markdown and display with nice formatting
+                        const parsedFeedback = marked.parse(feedback);
+                        document.getElementById('feedback').innerHTML = `
+                            <div class="feedback-header">
+                                <strong>🤖 AI Teacher Evaluation</strong>
+                            </div>
+                            <div class="markdown-content">
+                                ${parsedFeedback}
+                            </div>
+                        `;
+                        
+                        // Show feedback tabs and lesson button
+                        document.getElementById('feedback-tabs').style.display = 'block';
+                        document.getElementById('generateLessonBtn').style.display = 'inline-block';
+                        this.showTab('feedback');
+                        
+                    } else {
+                        throw new Error(`Rating failed: ${response.status}`);
+                    }
+                    
+                } catch (error) {
+                    console.error('🔴 GEMINI ERROR [Translation Rating]:', error);
+                    document.getElementById('feedback').innerHTML = '<strong>❌ Error rating translation. Please try again.</strong>';
+                } finally {
+                    document.getElementById('rateTranslationBtn').disabled = false;
+                }
+            }
+
+            updateTranslationContext() {
+                // Update chat context if it exists and chat is open
+                if (this.chatContext && this.currentStory) {
+                    // Update the system prompt with new translation
+                    this.initializeChatContext();
+                    
+                    // Update the context bar display if visible
+                    const contextBar = document.getElementById('chatContextBar');
+                    if (contextBar.style.display !== 'none') {
+                        this.updateContextDisplay();
+                        
+                        // Add a subtle indicator that context was updated
+                        const contextDiv = document.getElementById('chatContext');
+                        contextDiv.style.background = '#e8f5e8';
+                        setTimeout(() => {
+                            contextDiv.style.background = '';
+                        }, 500);
+                    }
+                    
+                    console.log('🔄 Chat context updated with new translation');
+                }
+            }
+
+            updateContextDisplay() {
+                if (!this.currentStory) return;
+                
+                const languageNames = {
+                    'spanish': 'Spanish',
+                    'italian': 'Italian', 
+                    'french': 'French',
+                    'english': 'English'
+                };
+                
+                const userTranslation = document.getElementById('translation-input').value || '[No translation entered yet]';
+                const contextText = `📖 ${languageNames[this.storyLanguage]}: ${this.currentStory} | ✅ Ideal: ${this.currentTranslation || 'Not generated yet'} | ✏️ Your translation: ${userTranslation}`;
+                
+                document.getElementById('chatContext').textContent = contextText;
+            }
+
+            openChatDialog() {
+                if (!this.currentStory || !this.currentTranslation) {
+                    // Show an error message in the chat instead of alert
+                    this.toggleChat();
+                    this.addChatMessage('Please generate a story first before asking questions!', 'ai');
+                    return;
+                }
+
+                // Show the chat widget
+                this.toggleChat();
+                
+                // Set up and display the context
+                this.updateContextDisplay();
+                document.getElementById('chatContextBar').style.display = 'block';
+                
+                // Initialize chat context with current translation
+                this.initializeChatContext();
+            }
+
+            toggleChat() {
+                const widget = document.getElementById('chatWidget');
+                widget.classList.toggle('minimized');
+                
+                // Initialize context if opening for first time with a story
+                if (!widget.classList.contains('minimized') && this.currentStory && !this.chatContext) {
+                    this.initializeChatContext();
+                }
+            }
+
+            initializeChatContext() {
+                // Set up the system prompt with current context
+                const userTranslation = document.getElementById('translation-input').value || '[No translation entered yet]';
+                
+                const languageNames = {
+                    'spanish': 'Spanish',
+                    'italian': 'Italian', 
+                    'french': 'French',
+                    'english': 'English'
+                };
+                
+                const fromLang = languageNames[this.storyLanguage];
+                const toLang = languageNames[this.translationLanguage];
+                
+                this.chatContext = [{
+                    role: 'system',
+                    content: `You are an experienced language teacher helping students learn ${fromLang} to ${toLang} translation. Be encouraging, clear, and educational.
+
+CONTEXT:
+- Original ${fromLang} text: "${this.currentStory}"
+- Reference ${toLang} translation: "${this.currentTranslation || 'Not generated yet'}"  
+- Student's translation: "${userTranslation}"
+
+GUIDELINES:
+- Answer questions about grammar, vocabulary, idioms, and cultural context
+- Explain why certain translations are better than others  
+- Help students improve their translation skills
+- Be supportive and focus on learning, not just correction
+- Keep responses concise (1-3 sentences)
+- Use simple language to explain complex concepts
+
+Please help the student with their translation questions.`
+                }];
+
+                // Clear the chat messages display
+                document.getElementById('chatMessages').innerHTML = '';
+            }
+
+            /**
+             * Send a chat message to the AI translation assistant
+             */
+            async sendChatMessage() {
+                const input = document.getElementById('chatInput');
+                const message = input.value?.trim();
+                
+                if (!message) return;
+                
+                if (!this.apiKey) {
+                    this.addChatMessage('Please validate your Gemini API key first!', 'ai');
+                    return;
+                }
+                
+                // Reset input height and clear
+                input.style.height = 'auto';
+                input.value = '';
+                
+                // Add user message to chat
+                this.addChatMessage(message, 'user');
+                
+                try {
+                    // Show loading message with typing indicator
+                    const loadingDiv = this.addChatMessage('💭 Thinking...', 'ai');
+                    
+                    // Prepare messages for Gemini (combine system + conversation)
+                    const systemPrompt = this.chatContext[0].content;
+                    const conversationHistory = this.chatContext.slice(1).map(msg => 
+                        msg.role === 'user' ? `Student: ${msg.content}` : `Teacher: ${msg.content}`
+                    ).join('\n\n');
+                    
+                    const fullPrompt = `${systemPrompt}\n\n${conversationHistory}\n\nStudent: ${message}\n\nTeacher:`;
+                    
+                    console.log('💬 Chat Prompt:', fullPrompt);
+                    
+                    // Call Gemini API
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${this.getModelEndpoint()}:generateContent?key=${this.apiKey}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            contents: [{
+                                parts: [{ text: fullPrompt }]
+                            }],
+                            generationConfig: {
+                                temperature: 0.7,
+                            }
+                        })
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        const aiResponse = data.candidates[0].content.parts[0].text.trim();
+                        
+                        // Replace loading message with AI response
+                        loadingDiv.textContent = aiResponse;
+                        
+                        // Add to chat context
+                        this.chatContext.push(
+                            { role: 'user', content: message },
+                            { role: 'assistant', content: aiResponse }
+                        );
+                    } else {
+                        const errorData = await response.json();
+                        console.error('Gemini API error:', errorData);
+                        loadingDiv.textContent = 'Sorry, there was an API error. Please check your API key and try again.';
+                    }
+                } catch (error) {
+                    console.error('🔴 GEMINI ERROR [Chat]:', error);
+                    const loadingDiv = document.querySelector('.chat-message.ai:last-child');
+                    if (loadingDiv) {
+                        loadingDiv.textContent = 'Sorry, I encountered an error. Please check your internet connection and try again.';
+                    }
+                }
+            }
+
+            addChatMessage(message, type) {
+                const messagesDiv = document.getElementById('chatMessages');
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `chat-message ${type}`;
+                
+                // Parse markdown for AI messages, plain text for user messages
+                if (type === 'ai' && message.includes('*') || message.includes('#') || message.includes('-')) {
+                    messageDiv.innerHTML = marked.parse(message);
+                } else {
+                    messageDiv.textContent = message;
+                }
+                
+                messagesDiv.appendChild(messageDiv);
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                return messageDiv;
+            }
+
+            clearChatContext() {
+                this.initializeChatContext();
+                document.getElementById('chatMessages').innerHTML = '';
+                this.addChatMessage('Chat context cleared! How can I help you with this translation?', 'ai');
+            }
+
+            showApiKeyHelp() {
+                const helpModal = document.getElementById('apiKeyHelpModal');
+                helpModal.style.display = 'flex';
+            }
+
+            hideApiKeyHelp() {
+                const helpModal = document.getElementById('apiKeyHelpModal');
+                helpModal.style.display = 'none';
+            }
+            
+            /**
+             * Generate a mini lesson based on translation feedback
+             */
+            async generateMiniLesson() {
+                if (!this.apiKey) {
+                    alert('Please validate your Gemini API key first!');
+                    return;
+                }
+                
+                const userTranslation = document.getElementById('translation-input').value.trim();
+                if (!userTranslation || !this.currentStory) {
+                    alert('Please complete a translation and get feedback first!');
+                    return;
+                }
+                
+                try {
+                    document.getElementById('generateLessonBtn').disabled = true;
+                    document.getElementById('mini-lesson').innerHTML = '<strong>📚 Generating personalized mini lesson...</strong>';
+                    this.showTab('lesson');
+                    
+                    const languageNames = {
+                        'spanish': 'Spanish',
+                        'italian': 'Italian', 
+                        'french': 'French',
+                        'english': 'English'
+                    };
+                    
+                    const fromLang = languageNames[this.storyLanguage];
+                    const toLang = languageNames[this.translationLanguage];
+                    
+                    const prompt = `You are an expert language teacher. Based on this translation exercise, create a focused mini lesson in markdown format.
+
+**Original ${fromLang}:** "${this.currentStory}"
+**Student's ${toLang} translation:** "${userTranslation}"
+
+Create a mini lesson that addresses the specific areas for improvement. Use this structure:
+
+# Mini Lesson: [Topic Focus]
+
+## 🎯 Learning Objectives
+- [2-3 specific objectives based on the translation errors]
+
+## 📝 Key Grammar Points
+### [Grammar Rule 1]
+- Explanation with examples
+- Common mistakes to avoid
+
+### [Grammar Rule 2] 
+- Explanation with examples
+- Common mistakes to avoid
+
+## 💬 Vocabulary Focus
+- **Word 1**: Definition and usage
+- **Word 2**: Definition and usage
+
+## ✨ Practice Examples
+1. [Example sentence in ${fromLang}]
+   - ✅ Correct ${toLang}: [translation]
+   - ❌ Common mistake: [wrong translation]
+
+2. [Another example]
+   - ✅ Correct: [translation]
+   - ❌ Avoid: [wrong translation]
+
+## 💡 Pro Tips
+- [2-3 practical tips for improvement]
+
+*Focus on the specific errors and patterns from their translation. Keep it concise but comprehensive.*`;
+
+                    console.log('📚 Mini Lesson Prompt:', prompt);
+
+                    // Call Gemini API
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${this.getModelEndpoint()}:generateContent?key=${this.apiKey}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            contents: [{
+                                parts: [{ text: prompt }]
+                            }],
+                            generationConfig: {
+                                temperature: 0.7,
+                            }
+                        })
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        const lesson = data.candidates[0].content.parts[0].text.trim();
+                        
+                        // Parse markdown and display
+                        const parsedLesson = marked.parse(lesson);
+                        document.getElementById('mini-lesson').innerHTML = parsedLesson;
+                        
+                    } else {
+                        throw new Error(`Lesson generation failed: ${response.status}`);
+                    }
+                    
+                } catch (error) {
+                    console.error('❌ Error generating mini lesson:', error);
+                    document.getElementById('mini-lesson').innerHTML = '<strong>❌ Error generating lesson. Please try again.</strong>';
+                } finally {
+                    document.getElementById('generateLessonBtn').disabled = false;
+                }
+            }
+            
+            /**
+             * Generate a structured JSON quiz based on translation feedback
+             */
+            async generateQuiz() {
+                if (!this.apiKey) {
+                    alert('Please validate your Gemini API key first!');
+                    return;
+                }
+                
+                const userTranslation = document.getElementById('translation-input').value.trim();
+                const feedbackContent = document.getElementById('feedback').textContent;
+                if (!userTranslation || !this.currentStory || !feedbackContent) {
+                    alert('Please complete a translation and get feedback first!');
+                    return;
+                }
+                
+                try {
+                    document.getElementById('generateQuizBtn').disabled = true;
+                    document.getElementById('quiz-container').innerHTML = '<strong>❓ Generating personalized quiz...</strong>';
+                    this.showTab('quiz');
+                    
+                    const languageNames = {
+                        'spanish': 'Spanish',
+                        'italian': 'Italian', 
+                        'french': 'French',
+                        'english': 'English'
+                    };
+                    
+                    const fromLang = languageNames[this.storyLanguage];
+                    const toLang = languageNames[this.translationLanguage];
+                    const cefrLevel = document.getElementById('cefr-level').value.toUpperCase();
+                    
+                    const miniLessonSchema = {
+                        "type": "object",
+                        "properties": {
+                            "cefr": { "type": "string", "enum": ["A1","A2","B1","B2","C1","C2"] },
+                            "sourceLanguage": { "type": "string" },
+                            "targetLanguage": { "type": "string" },
+                            "lessonFocus": { "type": "array", "items": { "type": "string" } },
+                            "storyExcerpt": { "type": "string" },
+                            "explanation": { "type": "string" },
+                            "questions": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "required": ["id","type","prompt"],
+                                    "properties": {
+                                        "id": { "type": "string" },
+                                        "type": { "type": "string", "enum": ["mcq","fill","order","correction","short"] },
+                                        "prompt": { "type": "string" },
+                                        "choices": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "required": ["id","text","isCorrect"],
+                                                "properties": {
+                                                    "id": { "type": "string" },
+                                                    "text": { "type": "string" },
+                                                    "isCorrect": { "type": "boolean" },
+                                                    "rationale": { "type": "string" }
+                                                }
+                                            }
+                                        },
+                                        "answer": {
+                                            "type": "object",
+                                            "properties": {
+                                                "expected": { "type": "string" },
+                                                "acceptable": { "type": "array", "items": { "type": "string" } }
+                                            }
+                                        },
+                                        "tokens": { "type": "array", "items": { "type": "string" } },
+                                        "corrected": { "type": "string" },
+                                        "explanation": { "type": "string" },
+                                        "difficulty": { "type": "string", "enum": ["easy","medium","hard"] },
+                                        "tags": { "type": "array", "items": { "type": "string" } }
+                                    }
+                                }
+                            }
+                        },
+                        "required": ["cefr","sourceLanguage","targetLanguage","lessonFocus","storyExcerpt","explanation","questions"]
+                    };
+                    
+                    const prompt = `You are a language tutor. Create a 2-4 question quiz based ONLY on the learner's mistakes and difficulties in the review below.
+Keep CEFR level = ${cefrLevel}.
+
+CONTEXT
+Story excerpt (source ${fromLang}): """${this.currentStory}"""
+Learner translation (to ${toLang}): """${userTranslation}"""
+AI review of learner's translation: """${feedbackContent}"""
+
+GUIDELINES
+- Lesson must target 1-2 grammar or vocab focuses max
+- Mix question types: mcq, fill, correction, short
+- For fill questions: write the sentence in ${fromLang} with underscores (___) where students fill in ${fromLang} words
+- For mcq questions: ask in ${toLang} about ${fromLang} grammar/vocab, with choices in ${fromLang}
+- Choices must include rationales; explanations should be concise
+- Focus on specific errors from the translation review
+- The student is learning ${fromLang}, so fill-in-the-blank should test ${fromLang} knowledge
+- For mcq questions, provide 3-4 choices with exactly one correct answer`;
+
+                    console.log('❓ Quiz Generation Prompt:', prompt);
+                    console.log('📄 Mini Lesson Schema:', miniLessonSchema);
+
+                    // Call Gemini API - try with schema first, fallback without if needed
+                    console.log('📄 Using schema:', JSON.stringify(miniLessonSchema, null, 2));
+                    
+                    let response;
+                    try {
+                        // Try with structured schema first
+                        response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${this.apiKey}`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                contents: [{
+                                    parts: [{ text: prompt }]
+                                }],
+                                generationConfig: {
+                                    temperature: 0.3,
+                                    topP: 0.8,
+                                    responseMimeType: "application/json",
+                                    responseSchema: miniLessonSchema
+                                }
+                            })
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error(`Schema request failed: ${response.status}`);
+                        }
+                    } catch (schemaError) {
+                        console.warn('Schema-based generation failed, trying without schema:', schemaError);
+                        
+                        // Fallback: try without schema but with explicit JSON instructions
+                        const fallbackPrompt = prompt + '\n\nReturn ONLY valid JSON in this exact format - no extra text or formatting.';
+                        
+                        response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${this.apiKey}`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                contents: [{
+                                    parts: [{ text: fallbackPrompt }]
+                                }],
+                                generationConfig: {
+                                    temperature: 0.3,
+                                    topP: 0.8,
+                                    responseMimeType: "application/json"
+                                }
+                            })
+                        });
+                    }
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        console.log('📎 Full API Response:', data);
+                        const quizText = data.candidates[0].content.parts[0].text.trim();
+                        console.log('📝 Raw Quiz Text Length:', quizText.length);
+                        console.log('📝 Raw Quiz Text Preview:', quizText.substring(0, 300));
+                        
+                        try {
+                            // Clean up the response text - remove excessive whitespace and tabs
+                            const cleanedText = quizText.replace(/\t+/g, ' ').replace(/\s+/g, ' ').trim();
+                            console.log('📄 Cleaned response:', cleanedText.substring(0, 500) + '...');
+                            
+                            const quizData = JSON.parse(cleanedText);
+                            console.log('📄 Received quiz data:', quizData);
+                            
+                            // Validate required fields
+                            if (!quizData.questions || !Array.isArray(quizData.questions)) {
+                                throw new Error('Invalid quiz format: missing questions array');
+                            }
+                            
+                            // Provide defaults for missing fields
+                            quizData.lessonFocus = quizData.lessonFocus || ['Grammar', 'Translation'];
+                            quizData.cefr = quizData.cefr || cefrLevel;
+                            quizData.title = quizData.title || 'Practice Quiz';
+                            quizData.explanation = quizData.explanation || 'Complete the following questions based on your translation.';
+                            
+                            // Clean up any malformed question prompts
+                            quizData.questions.forEach(question => {
+                                if (question.prompt) {
+                                    question.prompt = question.prompt.replace(/\t+/g, ' ').replace(/\s+/g, ' ').trim();
+                                }
+                            });
+                            
+                            this.currentQuizData = quizData;
+                            this.renderQuiz(quizData);
+                        } catch (parseError) {
+                            console.error('Failed to parse quiz JSON:', parseError);
+                            console.error('Raw response length:', quizText.length);
+                            console.error('Raw response preview:', quizText.substring(0, 200));
+                            console.error('Raw response end:', quizText.substring(quizText.length - 200));
+                            
+                            // Try to extract valid JSON if it exists
+                            try {
+                                const jsonStart = quizText.indexOf('{');
+                                const jsonEnd = quizText.lastIndexOf('}');
+                                if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+                                    const extractedJson = quizText.substring(jsonStart, jsonEnd + 1);
+                                    const cleanedJson = extractedJson.replace(/\t+/g, ' ').replace(/\s+/g, ' ');
+                                    const recoveredData = JSON.parse(cleanedJson);
+                                    console.log('✅ Recovered quiz data from malformed response');
+                                    
+                                    // Apply same validation and defaults
+                                    recoveredData.lessonFocus = recoveredData.lessonFocus || ['Grammar', 'Translation'];
+                                    recoveredData.cefr = recoveredData.cefr || cefrLevel;
+                                    recoveredData.title = recoveredData.title || 'Practice Quiz';
+                                    recoveredData.explanation = recoveredData.explanation || 'Complete the following questions.';
+                                    
+                                    this.currentQuizData = recoveredData;
+                                    this.renderQuiz(recoveredData);
+                                    return;
+                                }
+                            } catch (recoveryError) {
+                                console.error('Recovery attempt failed:', recoveryError);
+                            }
+                            
+                            throw new Error('Invalid quiz format received - unable to parse or recover JSON');
+                        }
+                        
+                    } else {
+                        throw new Error(`Quiz generation failed: ${response.status}`);
+                    }
+                    
+                } catch (error) {
+                    console.error('❌ Error generating quiz:', error);
+                    document.getElementById('quiz-container').innerHTML = '<strong>❌ Error generating quiz. Please try again.</strong>';
+                } finally {
+                    document.getElementById('generateQuizBtn').disabled = false;
+                }
+            }
+            
+            /**
+             * Render the quiz interface from JSON data
+             */
+            renderQuiz(quizData) {
+                const container = document.getElementById('quiz-container');
+                
+                // Safely handle potentially missing fields
+                const title = quizData.title || 'Practice Quiz';
+                const cefr = quizData.cefr || 'A2';
+                const lessonFocus = Array.isArray(quizData.lessonFocus) ? quizData.lessonFocus.join(', ') : 'Grammar & Vocabulary';
+                const explanation = quizData.explanation || 'Complete the following questions.';
+                
+                let html = `
+                    <div class="quiz-header">
+                        <h2>${title}</h2>
+                        <div class="quiz-meta">
+                            Level: ${cefr} | Focus: ${lessonFocus}
+                        </div>
+                        <p>${explanation}</p>
+                    </div>
+                `;
+                
+                quizData.questions.forEach((question, index) => {
+                    html += `<div class="question" data-question-id="${question.id}">`;
+                    html += `<div class="question-number">Question ${index + 1}</div>`;
+                    html += `<div class="question-prompt">${question.prompt}</div>`;
+                    
+                    switch (question.type) {
+                        case 'mcq':
+                            html += '<div class="choices">';
+                            question.choices.forEach(choice => {
+                                html += `
+                                    <div class="choice" data-choice-id="${choice.id}" onclick="languageApp.selectChoice('${question.id}', '${choice.id}')">
+                                        <div class="choice-radio"></div>
+                                        <span>${choice.text}</span>
+                                    </div>
+                                `;
+                            });
+                            html += '</div>';
+                            break;
+                            
+                        case 'fill':
+                            // Replace ___ with input fields and update the prompt HTML
+                            let fillText = question.prompt;
+                            let inputCounter = 0;
+                            fillText = fillText.replace(/___+/g, () => {
+                                inputCounter++;
+                                return `<input type="text" class="fill-input" data-question-id="${question.id}" data-input-index="${inputCounter}" placeholder="...">`;
+                            });
+                            // Replace the prompt div content
+                            html = html.replace(`<div class="question-prompt">${question.prompt}</div>`, `<div class="question-prompt">${fillText}</div>`);
+                            break;
+                            
+                        case 'order':
+                            html += '<div class="tokens">';
+                            question.tokens.forEach((token, tokenIndex) => {
+                                html += `<div class="token" onclick="languageApp.selectToken('${question.id}', ${tokenIndex})">${token}</div>`;
+                            });
+                            html += '</div>';
+                            html += `<div class="answer-area" data-question-id="${question.id}">Drag tokens here...</div>`;
+                            break;
+                            
+                        case 'correction':
+                            html += `
+                                <div class="correction-area">
+                                    <div class="correction-text">${question.prompt}</div>
+                                    <textarea class="fill-input" style="width: 100%; height: 60px; resize: vertical;" data-question-id="${question.id}" placeholder="Enter the corrected sentence..."></textarea>
+                                </div>
+                            `;
+                            break;
+                            
+                        case 'short':
+                            html += `<textarea class="fill-input" style="width: 100%; height: 80px; resize: vertical;" data-question-id="${question.id}" placeholder="Enter your answer..."></textarea>`;
+                            break;
+                    }
+                    
+                    html += '</div>';
+                });
+                
+                html += '<button class="quiz-grade-btn" onclick="languageApp.gradeQuiz()">Grade Quiz</button>';
+                html += '<div id="quiz-results"></div>';
+                
+                container.innerHTML = html;
+            }
+            
+            /**
+             * Handle multiple choice selection
+             */
+            selectChoice(questionId, choiceId) {
+                const questionDiv = document.querySelector(`[data-question-id="${questionId}"]`);
+                // Clear previous selections
+                questionDiv.querySelectorAll('.choice').forEach(choice => {
+                    choice.classList.remove('selected');
+                });
+                // Select current choice
+                const selectedChoice = questionDiv.querySelector(`[data-choice-id="${choiceId}"]`);
+                selectedChoice.classList.add('selected');
+            }
+            
+            /**
+             * Handle token selection for ordering questions
+             */
+            selectToken(questionId, tokenIndex) {
+                const questionDiv = document.querySelector(`[data-question-id="${questionId}"]`);
+                const token = questionDiv.querySelectorAll('.token')[tokenIndex];
+                const answerArea = questionDiv.querySelector('.answer-area');
+                
+                if (!token.classList.contains('selected')) {
+                    token.classList.add('selected');
+                    const tokenCopy = token.cloneNode(true);
+                    tokenCopy.onclick = () => {
+                        tokenCopy.remove();
+                        token.classList.remove('selected');
+                    };
+                    answerArea.appendChild(tokenCopy);
+                }
+            }
+            
+            /**
+             * Grade the completed quiz
+             */
+            gradeQuiz() {
+                if (!this.currentQuizData) return;
+                
+                let score = 0;
+                const totalQuestions = this.currentQuizData.questions.length;
+                const results = [];
+                
+                this.currentQuizData.questions.forEach((question, qIndex) => {
+                    console.log(`Grading question ${qIndex + 1}:`, question);
+                    const questionDiv = document.querySelector(`[data-question-id="${question.id}"]`);
+                    let isCorrect = false;
+                    let userAnswer = '';
+                    
+                    switch (question.type) {
+                        case 'mcq':
+                            const selectedChoice = questionDiv.querySelector('.choice.selected');
+                            if (selectedChoice) {
+                                const choiceId = selectedChoice.getAttribute('data-choice-id');
+                                const choice = question.choices.find(c => c.id === choiceId);
+                                isCorrect = choice.isCorrect;
+                                userAnswer = choice.text;
+                                
+                                // Show visual feedback
+                                if (isCorrect) {
+                                    selectedChoice.classList.add('correct');
+                                } else {
+                                    selectedChoice.classList.add('incorrect');
+                                    // Show correct answer
+                                    const correctChoice = questionDiv.querySelector(`[data-choice-id="${question.choices.find(c => c.isCorrect).id}"]`);
+                                    correctChoice.classList.add('correct');
+                                }
+                            }
+                            break;
+                            
+                        case 'fill':
+                            const fillInputs = questionDiv.querySelectorAll('.fill-input');
+                            if (fillInputs.length > 0) {
+                                // Combine all fill-in answers
+                                const answers = Array.from(fillInputs).map(input => input.value.trim());
+                                userAnswer = answers.join(' ');
+                                if (question.answer && question.answer.expected) {
+                                    const expected = question.answer.expected.toLowerCase();
+                                    const acceptable = question.answer.acceptable ? question.answer.acceptable.map(a => a.toLowerCase()) : [];
+                                    isCorrect = userAnswer.toLowerCase() === expected || acceptable.includes(userAnswer.toLowerCase());
+                                } else {
+                                    // If no expected answer, consider it correct for now
+                                    isCorrect = userAnswer.length > 0;
+                                }
+                            }
+                            break;
+                            
+                        case 'short':
+                            const shortInput = questionDiv.querySelector('textarea');
+                            if (shortInput) {
+                                userAnswer = shortInput.value.trim();
+                                if (question.answer && question.answer.expected) {
+                                    const expected = question.answer.expected.toLowerCase();
+                                    const acceptable = question.answer.acceptable ? question.answer.acceptable.map(a => a.toLowerCase()) : [];
+                                    isCorrect = userAnswer.toLowerCase() === expected || acceptable.includes(userAnswer.toLowerCase());
+                                } else {
+                                    // If no expected answer, consider it correct if not empty
+                                    isCorrect = userAnswer.length > 0;
+                                }
+                            }
+                            break;
+                            
+                        case 'order':
+                            const answerArea = questionDiv.querySelector('.answer-area');
+                            const orderedTokens = Array.from(answerArea.querySelectorAll('.token')).map(t => t.textContent);
+                            userAnswer = orderedTokens.join(' ');
+                            if (question.tokens && Array.isArray(question.tokens)) {
+                                isCorrect = userAnswer === question.tokens.join(' ');
+                            } else {
+                                // If no tokens array, consider it correct if not empty
+                                isCorrect = userAnswer.length > 0;
+                            }
+                            break;
+                            
+                        case 'correction':
+                            const textarea = questionDiv.querySelector('textarea');
+                            if (textarea) {
+                                userAnswer = textarea.value.trim();
+                                if (question.corrected) {
+                                    isCorrect = userAnswer.toLowerCase() === question.corrected.toLowerCase();
+                                } else {
+                                    // If no corrected version, consider it correct if not empty
+                                    isCorrect = userAnswer.length > 0;
+                                }
+                            }
+                            break;
+                    }
+                    
+                    if (isCorrect) score++;
+                    results.push({
+                        question: question.prompt,
+                        userAnswer,
+                        isCorrect,
+                        explanation: question.explanation
+                    });
+                });
+                
+                const percentage = Math.round((score / totalQuestions) * 100);
+                const resultsDiv = document.getElementById('quiz-results');
+                
+                let resultsHtml = `
+                    <div class="quiz-results">
+                        <div class="score-display">🎆 Score: ${score}/${totalQuestions} (${percentage}%)</div>
+                        <div style="margin-bottom: 15px;">
+                            ${percentage >= 80 ? '🎉 Excellent work!' : 
+                              percentage >= 60 ? '👍 Good job! Keep practicing.' : 
+                              '💪 Keep studying - you\'re making progress!'}
+                        </div>
+                `;
+                
+                results.forEach((result, index) => {
+                    resultsHtml += `
+                        <div style="margin: 10px 0; padding: 10px; background: ${result.isCorrect ? '#d4edda' : '#f8d7da'}; border-radius: 4px;">
+                            <strong>Q${index + 1}:</strong> ${result.isCorrect ? '✅' : '❌'} ${result.explanation}
+                        </div>
+                    `;
+                });
+                
+                resultsHtml += '</div>';
+                resultsDiv.innerHTML = resultsHtml;
+            }
+            
+            /**
+             * Switch between feedback, lesson, and quiz tabs
+             */
+            showTab(tabName) {
+                // Hide all tab contents
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.remove('active');
+                });
+                
+                // Remove active class from all tab buttons
+                document.querySelectorAll('.tab-button').forEach(button => {
+                    button.classList.remove('active');
+                });
+                
+                // Show selected tab content
+                document.getElementById(`${tabName}-content`).classList.add('active');
+                
+                // Add active class to selected tab button
+                document.querySelector(`.tab-button[onclick="languageApp.showTab('${tabName}')"]`).classList.add('active');
+            }
+        }
+
+        // Initialize app when page loads
+        window.addEventListener('DOMContentLoaded', () => {
+            console.log('🚀 DOM loaded, creating Polyglot app...');
+            try {
+                const app = new LanguageLearningApp();
+                window.languageApp = app;
+                console.log('✅ Global languageApp created:', window.languageApp);
+                app.initialize();
+                console.log('✅ App initialized');
+            } catch (error) {
+                console.error('❌ Failed to create or initialize app:', error);
+            }
+        });
+    </script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+            background-color: #f5f7fa;
+        }
+        
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 5px;
+            font-size: 2.5rem;
+        }
+
+        .subtitle {
+            color: #7f8c8d;
+            font-size: 1.1rem;
+            margin-bottom: 0;
+            font-weight: 300;
+        }
+        
+        .status {
+            text-align: center;
+            padding: 20px;
+            background: #e3f2fd;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-weight: bold;
+            color: #1976d2;
+        }
+        
+        .controls {
+            display: none;
+            margin-bottom: 30px;
+        }
+        
+        .api-controls {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .api-key-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        
+        .api-key-header label {
+            font-weight: 600;
+            color: #2c3e50;
+            margin: 0;
+        }
+        
+        .help-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            padding: 0;
+            flex-shrink: 0;
+            line-height: 1;
+            font-weight: bold;
+        }
+        
+        .help-btn:hover {
+            transform: scale(1.2);
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+        }
+        
+        .api-key-form {
+            width: 100%;
+        }
+        
+        .api-input-wrapper {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 12px;
+            align-items: center;
+        }
+        
+        .api-input-wrapper input {
+            flex: 1;
+            padding: 14px 16px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            font-family: 'Courier New', monospace;
+            background: white;
+            transition: border-color 0.3s ease;
+            min-width: 300px;
+        }
+        
+        .api-input-wrapper input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .api-input-wrapper button {
+            padding: 14px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            white-space: nowrap;
+            transition: all 0.2s ease;
+        }
+        
+        .api-input-wrapper button:hover {
+            opacity: 0.9;
+        }
+        
+        .api-status {
+            font-size: 13px;
+            color: #6c757d;
+        }
+        
+        .api-status a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        
+        .api-status a:hover {
+            text-decoration: underline;
+        }
+        
+        /* Model Selection */
+        .model-selection,
+        .model-selection-inline {
+            margin-top: 20px;
+            margin-bottom: 20px;
+            padding: 16px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .model-selection {
+            margin-bottom: 30px;
+            padding: 20px;
+        }
+        
+        .model-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+        
+        .model-header label {
+            font-weight: 600;
+            color: #2c3e50;
+            margin: 0;
+            font-size: 16px;
+        }
+        
+        .model-info {
+            font-size: 12px;
+            color: #6c757d;
+            font-style: italic;
+        }
+        
+        .model-buttons {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        
+        .model-btn {
+            flex: 1;
+            min-width: 120px;
+            padding: 16px 12px;
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        
+        .model-btn:hover {
+            border-color: #667eea;
+            background: #f8f9ff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+        }
+        
+        .model-btn.active {
+            border-color: #667eea;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+        }
+        
+        .model-name {
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .model-desc {
+            font-size: 11px;
+            opacity: 0.8;
+        }
+        
+        .model-btn:not(.active) .model-desc {
+            color: #6c757d;
+        }
+        
+        .progress-bar {
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .progress-container {
+            width: 100%;
+            height: 20px;
+            background-color: #f0f0f0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3498db, #2980b9);
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 10px;
+        }
+        
+        .progress-text {
+            font-weight: bold;
+            color: #2c3e50;
+            font-size: 14px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #34495e;
+        }
+        
+        select, input, textarea, button {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        
+        select:focus, input:focus, textarea:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+        
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+        
+        button:hover:not(:disabled) {
+            background: #2980b9;
+        }
+        
+        button:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+        
+        .language-selector {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 25px;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .language-dropdown-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            flex: 1;
+        }
+        
+        .language-dropdown-group label {
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 14px;
+        }
+        
+        .language-dropdown-group select {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            background: white;
+        }
+        
+        .swap-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 45px;
+            height: 45px;
+            cursor: pointer;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+        
+        .swap-btn:hover {
+            transform: rotate(180deg);
+            opacity: 0.9;
+        }
+        
+        .form-row {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .form-row .form-group {
+            flex: 1;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .story-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        
+        .story-output {
+            background: white;
+            padding: 15px;
+            border-left: 4px solid #3498db;
+            margin: 15px 0;
+            font-size: 18px;
+            line-height: 1.8;
+        }
+        
+        .translation-section {
+            display: none;
+            margin-top: 20px;
+        }
+        
+        .feedback {
+            background: #f8f9fa;
+            padding: 0;
+            border-radius: 8px;
+            margin-top: 15px;
+            border: 1px solid #e9ecef;
+            overflow: hidden;
+        }
+
+        .feedback-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 20px;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .markdown-content {
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .markdown-content h2 {
+            color: #2c3e50;
+            font-size: 24px;
+            margin: 0 0 15px 0;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #3498db;
+        }
+
+        .markdown-content h3 {
+            color: #34495e;
+            font-size: 18px;
+            margin: 20px 0 10px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .markdown-content ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+
+        .markdown-content li {
+            margin: 8px 0;
+            color: #555;
+        }
+
+        .markdown-content blockquote {
+            background: #f1f3f4;
+            border-left: 4px solid #4CAF50;
+            margin: 15px 0;
+            padding: 12px 16px;
+            font-style: italic;
+            color: #2e7d32;
+        }
+
+        .markdown-content code {
+            background: #f1f3f4;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+
+        .markdown-content strong {
+            color: #2c3e50;
+            font-weight: 600;
+        }
+        
+        /* Feedback Tabs */
+        .feedback-tabs {
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-top: 15px;
+            border: 1px solid #e9ecef;
+            overflow: hidden;
+        }
+        
+        .tab-buttons {
+            display: flex;
+            background: #f1f3f4;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .tab-button {
+            flex: 1;
+            padding: 12px 20px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            color: #666;
+            transition: all 0.2s ease;
+            border-radius: 0;
+        }
+        
+        .tab-button:hover {
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+        }
+        
+        .tab-button.active {
+            background: white;
+            color: #2c3e50;
+            border-bottom: 3px solid #667eea;
+        }
+        
+        .tab-content {
+            display: none;
+            padding: 0;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .mini-lesson {
+            padding: 20px;
+            line-height: 1.6;
+            background: white;
+        }
+        
+        .mini-lesson h1,
+        .mini-lesson h2,
+        .mini-lesson h3 {
+            color: #2c3e50;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+        
+        .mini-lesson h1 {
+            font-size: 24px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 8px;
+        }
+        
+        .mini-lesson h2 {
+            font-size: 20px;
+            color: #34495e;
+        }
+        
+        .mini-lesson h3 {
+            font-size: 16px;
+            color: #34495e;
+        }
+        
+        .mini-lesson ul,
+        .mini-lesson ol {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        
+        .mini-lesson li {
+            margin: 6px 0;
+        }
+        
+        .mini-lesson blockquote {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            margin: 15px 0;
+            padding: 12px 16px;
+            font-style: italic;
+            color: #555;
+        }
+        
+        .mini-lesson code {
+            background: #f1f3f4;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+        
+        .mini-lesson strong {
+            color: #2c3e50;
+            font-weight: 600;
+        }
+        
+        .mini-lesson em {
+            color: #667eea;
+            font-style: italic;
+        }
+        
+        
+        .language-indicator {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #34495e;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        
+        .lang-label {
+            font-weight: bold;
+        }
+        
+        .swap-btn {
+            background: #e74c3c;
+            width: auto;
+            padding: 8px 15px;
+            font-size: 14px;
+        }
+        
+        .swap-btn:hover {
+            background: #c0392b;
+        }
+        
+        @media (max-width: 768px) {
+            .button-group {
+                flex-direction: column;
+            }
+            
+            .language-indicator {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+
+        /* Floating Chat Widget Styles */
+        .chat-widget {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        .chat-toggle {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 12px 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            transition: all 0.3s ease;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .chat-toggle:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        .chat-window {
+            position: absolute;
+            bottom: 70px;
+            right: 0;
+            width: 350px;
+            height: 500px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            opacity: 0;
+            transform: translateY(20px) scale(0.95);
+            transition: all 0.3s ease;
+            pointer-events: none;
+        }
+
+        .chat-widget:not(.minimized) .chat-window {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            pointer-events: all;
+        }
+
+        .chat-widget.minimized #chatToggleText {
+            display: inline;
+        }
+
+        .chat-widget:not(.minimized) #chatToggleText {
+            display: none;
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-title {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .chat-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .chat-actions button {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            transition: background 0.2s ease;
+        }
+
+        .chat-actions button:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .chat-context-bar {
+            background: #f8f9fa;
+            padding: 12px 16px;
+            border-bottom: 1px solid #e9ecef;
+            font-size: 11px;
+            color: #6c757d;
+            max-height: 120px;
+            overflow-y: auto;
+        }
+
+        .context-text {
+            line-height: 1.4;
+        }
+
+        .chat-messages-container {
+            flex: 1;
+            padding: 16px;
+            overflow-y: auto;
+            background: #fafbfc;
+        }
+
+        .chat-message {
+            margin-bottom: 12px;
+            max-width: 85%;
+            word-wrap: break-word;
+        }
+
+        .chat-message.user {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 10px 12px;
+            border-radius: 16px 16px 4px 16px;
+            margin-left: auto;
+            font-size: 14px;
+        }
+
+        .chat-message.ai {
+            background: white;
+            color: #2c3e50;
+            padding: 10px 12px;
+            border-radius: 16px 16px 16px 4px;
+            margin-right: auto;
+            border: 1px solid #e9ecef;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .chat-message.ai h1,
+        .chat-message.ai h2,
+        .chat-message.ai h3 {
+            margin: 8px 0 4px 0;
+            font-size: inherit;
+            font-weight: 600;
+        }
+
+        .chat-message.ai ul,
+        .chat-message.ai ol {
+            margin: 4px 0;
+            padding-left: 16px;
+        }
+
+        .chat-message.ai li {
+            margin: 2px 0;
+        }
+
+        .chat-message.ai strong {
+            font-weight: 600;
+        }
+
+        .chat-message.ai em {
+            font-style: italic;
+        }
+
+        .chat-message.ai code {
+            background: #f1f3f4;
+            padding: 1px 3px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+
+        .chat-input-area {
+            padding: 16px;
+            border-top: 1px solid #e9ecef;
+            background: white;
+        }
+
+        .input-wrapper {
+            display: flex;
+            align-items: end;
+            gap: 8px;
+            background: #f8f9fa;
+            border-radius: 20px;
+            padding: 8px 12px;
+            border: 1px solid #e9ecef;
+        }
+
+        .input-wrapper:focus-within {
+            border-color: #667eea;
+            background: white;
+        }
+
+        #chatInput {
+            flex: 1;
+            border: none;
+            background: transparent;
+            resize: none;
+            outline: none;
+            font-size: 14px;
+            line-height: 1.4;
+            max-height: 100px;
+            min-height: 20px;
+        }
+
+        .send-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .send-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .send-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* API Key Help Modal */
+        .help-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        .help-modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            margin: 20px;
+        }
+        
+        .help-modal h2 {
+            color: #2c3e50;
+            margin: 0 0 16px 0;
+            font-size: 22px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .help-modal h3 {
+            color: #34495e;
+            margin: 16px 0 8px 0;
+            font-size: 16px;
+        }
+        
+        .help-modal p {
+            line-height: 1.5;
+            color: #555;
+            margin: 8px 0;
+        }
+        
+        .help-modal ol {
+            padding-left: 20px;
+        }
+        
+        .help-modal li {
+            margin: 8px 0;
+            line-height: 1.4;
+        }
+        
+        .help-modal a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        
+        .help-modal a:hover {
+            text-decoration: underline;
+        }
+        
+        .help-modal-close {
+            position: absolute;
+            top: 12px;
+            right: 16px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.2s ease;
+        }
+        
+        .help-modal-close:hover {
+            background: #f1f1f1;
+            color: #666;
+        }
+        
+        .help-step {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 6px;
+            margin: 8px 0;
+            border-left: 4px solid #667eea;
+        }
+        
+        .help-warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 12px;
+            border-radius: 6px;
+            margin: 12px 0;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 480px) {
+            .chat-widget {
+                bottom: 10px;
+                right: 10px;
+            }
+            
+            .chat-window {
+                width: calc(100vw - 20px);
+                max-width: 350px;
+                height: 450px;
+                bottom: 60px;
+            }
+            
+            .help-modal-content {
+                max-width: calc(100vw - 40px);
+                margin: 10px;
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌍 Get Fluent Now</h1>
+            <p class="subtitle">AI-Powered Language Learning & Translation Practice</p>
+        </div>
+        
+        <div id="status" class="status">Initializing...</div>
+        
+        <div id="api-controls" class="api-controls">
+            <form class="api-key-form" onsubmit="event.preventDefault(); languageApp.validateApiKey();">
+                <div class="api-key-section">
+                    <div class="api-key-header">
+                        <label for="gemini-api-key">🔑 Gemini API Key (required for AI chat):</label>
+                        <button type="button" id="help-btn" class="help-btn" onclick="languageApp.showApiKeyHelp()" title="Help getting your API key">?</button>
+                    </div>
+                    <div class="api-input-wrapper">
+                        <input type="password" id="gemini-api-key" placeholder="Enter your Gemini API key (press Enter to validate)..." autocomplete="off" />
+                        <button type="submit" id="validate-key-btn">Validate</button>
+                    </div>
+                    <div id="api-status" class="api-status">
+                        ℹ️ Get your free API key at <a href="https://ai.google.dev/gemini-api/docs/api-key" target="_blank">Google AI for Developers</a>
+                    </div>
+                    
+                    <!-- Model Selection within API section -->
+                    <div id="model-selection" class="model-selection-inline">
+                        <div class="model-header">
+                            <label>🧠 Choose AI Model:</label>
+                            <span class="model-info">Each model has different capabilities and speed</span>
+                        </div>
+                        <div class="model-buttons">
+                            <button id="model-flash-lite" class="model-btn active" onclick="languageApp.setModel('flash-lite')" title="Ultra-fast, lightweight model">
+                                <div class="model-name">Flash 8B</div>
+                                <div class="model-desc">🚀 Ultra-Fast</div>
+                            </button>
+                            <button id="model-flash" class="model-btn" onclick="languageApp.setModel('flash')" title="Fastest, great for most tasks">
+                                <div class="model-name">Flash</div>
+                                <div class="model-desc">⚡ Fast & Efficient</div>
+                            </button>
+                            <button id="model-pro" class="model-btn" onclick="languageApp.setModel('pro')" title="Most capable, slower but higher quality">
+                                <div class="model-name">Pro</div>
+                                <div class="model-desc">🎯 Highest Quality</div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+        
+        <div id="app-controls" class="controls">
+            <div class="language-selector">
+                <div class="language-dropdown-group">
+                    <label for="story-language">Story Language:</label>
+                    <select id="story-language">
+                        <option value="spanish">Spanish</option>
+                        <option value="italian">Italian</option>
+                        <option value="french">French</option>
+                        <option value="english">English</option>
+                    </select>
+                </div>
+                
+                <button class="swap-btn" onclick="languageApp.swapLanguages()" title="Swap Languages">
+                    <span>⇄</span>
+                </button>
+                
+                <div class="language-dropdown-group">
+                    <label for="translation-language">Translation Language:</label>
+                    <select id="translation-language">
+                        <option value="english">English</option>
+                        <option value="spanish">Spanish</option>
+                        <option value="italian">Italian</option>
+                        <option value="french">French</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="story-theme">Story Theme:</label>
+                    <select id="story-theme" onchange="languageApp.handleThemeChange()">
+                        <option value="travel">Travel & Adventure</option>
+                        <option value="food">Food & Cooking</option>
+                        <option value="family">Family & Relationships</option>
+                        <option value="work">Work & Career</option>
+                        <option value="culture">Culture & Traditions</option>
+                        <option value="nature">Nature & Environment</option>
+                        <option value="technology">Technology & Innovation</option>
+                        <option value="health">Health & Wellness</option>
+                        <option value="custom">✏️ Custom Theme...</option>
+                    </select>
+                    <input type="text" id="custom-theme" placeholder="Enter your own theme (e.g., 'cooking with friends', 'visiting a museum')" style="display: none; margin-top: 8px; padding: 10px; border: 1px solid #ddd; border-radius: 6px; width: 100%;" />
+                </div>
+                
+                <div class="form-group">
+                    <label for="cefr-level">CEFR Level:</label>
+                    <select id="cefr-level">
+                        <option value="a1">A1 (Beginner)</option>
+                        <option value="a2">A2 (Elementary)</option>
+                        <option value="b1">B1 (Pre-Intermediate)</option>
+                        <option value="b2">B2 (Intermediate)</option>
+                        <option value="c1">C1 (Advanced)</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="button-group">
+                <button id="generateBtn" onclick="languageApp.generateStory()">Generate Story</button>
+                <button id="showTranslationBtn" onclick="languageApp.showTranslation()" style="display: none;">Show Translation</button>
+                <button onclick="languageApp.resetExercise()">Reset Exercise</button>
+            </div>
+            
+            <div class="story-section">
+                <h3>Story to Translate:</h3>
+                <div id="story-output" class="story-output"></div>
+            </div>
+            
+            <div id="translation-section" class="translation-section">
+                <div class="form-group">
+                    <label for="translation-input">Your Translation:</label>
+                    <textarea id="translation-input" rows="4" placeholder="Enter your translation here..." oninput="languageApp.updateTranslationContext()"></textarea>
+                </div>
+                
+                <div class="button-group">
+                    <button id="rateTranslationBtn" onclick="languageApp.rateTranslation()" style="display: none;">Rate My Translation</button>
+                    <button id="generateLessonBtn" onclick="languageApp.generateMiniLesson()" style="display: none;">Generate Mini Lesson</button>
+                </div>
+                
+                <!-- Feedback Tabs -->
+                <div id="feedback-tabs" class="feedback-tabs" style="display: none;">
+                    <div class="tab-buttons">
+                        <button class="tab-button active" onclick="languageApp.showTab('feedback')">📊 Feedback</button>
+                        <button class="tab-button" onclick="languageApp.showTab('lesson')">📚 Mini Lesson</button>
+                    </div>
+                    <div id="feedback-content" class="tab-content active">
+                        <div id="feedback" class="feedback"></div>
+                    </div>
+                    <div id="lesson-content" class="tab-content">
+                        <div id="mini-lesson" class="mini-lesson"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- API Key Help Modal -->
+    <div id="apiKeyHelpModal" class="help-modal" onclick="if(event.target === this) languageApp.hideApiKeyHelp()">
+        <div class="help-modal-content" style="position: relative;">
+            <button class="help-modal-close" onclick="languageApp.hideApiKeyHelp()">×</button>
+            <h2>🔑 How to Get Your Gemini API Key</h2>
+            
+            <p>Get your <strong>free</strong> Gemini API key in just a few minutes:</p>
+            
+            <h3>🚀 Quick Steps:</h3>
+            <ol>
+                <li>
+                    <div class="help-step">
+                        <strong>Visit Google AI Studio:</strong><br>
+                        Go to <a href="https://ai.google.dev/gemini-api/docs/api-key" target="_blank">ai.google.dev/gemini-api/docs/api-key</a>
+                    </div>
+                </li>
+                <li>
+                    <div class="help-step">
+                        <strong>Sign In:</strong><br>
+                        Use your Google account to sign in to Google AI Studio
+                    </div>
+                </li>
+                <li>
+                    <div class="help-step">
+                        <strong>Create API Key:</strong><br>
+                        Click "Get API key" → "Create API key" → "Create API key in new project"
+                    </div>
+                </li>
+                <li>
+                    <div class="help-step">
+                        <strong>Accept Terms:</strong><br>
+                        Review and accept the Google APIs Terms of Service
+                    </div>
+                </li>
+                <li>
+                    <div class="help-step">
+                        <strong>Copy & Paste:</strong><br>
+                        Copy your new API key and paste it into the field above
+                    </div>
+                </li>
+            </ol>
+            
+            <div class="help-warning">
+                ⚠️ <strong>Keep Your Key Safe:</strong> Don't share your API key publicly or commit it to code repositories.
+            </div>
+            
+            <h3>📚 Helpful Links:</h3>
+            <p>
+                • <a href="https://ai.google.dev/gemini-api/docs/api-key" target="_blank">Official API Key Guide</a><br>
+                • <a href="https://ai.google.dev/gemini-api/docs" target="_blank">Gemini API Documentation</a><br>
+                • <a href="https://ai.google.dev/gemini-api/docs/quickstart" target="_blank">API Quickstart Guide</a>
+            </p>
+            
+            <p style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #eee; color: #666; font-size: 14px;">
+                The Gemini API is free for personal use with generous limits. Perfect for language learning!
+            </p>
+        </div>
+    </div>
+    
+    <!-- Floating Chat Widget -->
+    <div id="chatWidget" class="chat-widget minimized" style="display: none;">
+        <div class="chat-toggle" onclick="languageApp.toggleChat()">
+            <span id="chatToggleIcon">💬</span>
+            <span id="chatToggleText">Ask AI</span>
+        </div>
+        <div class="chat-window">
+            <div class="chat-header">
+                <div class="chat-title">
+                    <span>🤖 Translation Assistant</span>
+                </div>
+                <div class="chat-actions">
+                    <button onclick="languageApp.clearChatContext()" class="clear-btn" title="Clear Context">🗑️</button>
+                    <button onclick="languageApp.toggleChat()" class="minimize-btn" title="Minimize">−</button>
+                </div>
+            </div>
+            <div class="chat-context-bar" id="chatContextBar" style="display: none;">
+                <div id="chatContext" class="context-text"></div>
+            </div>
+            <div id="chatMessages" class="chat-messages-container"></div>
+            <div class="chat-input-area">
+                <div class="input-wrapper">
+                    <textarea id="chatInput" placeholder="Ask about this translation..." rows="1" 
+                             onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();languageApp.sendChatMessage();}"
+                             oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,100)+'px'"></textarea>
+                    <button onclick="languageApp.sendChatMessage()" class="send-btn" title="Send">
+                        <span>➤</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

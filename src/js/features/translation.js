@@ -97,13 +97,13 @@ export class TranslationManager {
         
         feedbackElement.innerHTML = `
             <div class="feedback-content">
-                <div class="ai-feedback">
-                    <h4>🎯 AI Feedback</h4>
-                    ${formattedFeedback}
-                </div>
                 <div class="reference-translation">
                     <h4>📖 Reference Translation</h4>
                     <p><em>${result.referenceTranslation}</em></p>
+                </div>
+                <div class="ai-feedback">
+                    <h4>🎯 AI Feedback</h4>
+                    ${formattedFeedback}
                 </div>
             </div>
         `;

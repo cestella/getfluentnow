@@ -1,0 +1,445 @@
+import { GeminiAPI } from './api/gemini.js';
+import { TranslationManager } from './features/translation.js';
+import { ChatManager } from './features/chat.js';
+import { getStoryParams, getRandomVariant } from './utils/story-generator.js';
+import { languageNames, DEFAULT_SETTINGS } from './utils/constants.js';
+
+/**
+ * Main application class for Get Fluent Now language learning app
+ */
+class LanguageLearningApp {
+    constructor() {
+        this.currentStory = null;
+        this.sourceLanguage = DEFAULT_SETTINGS.sourceLanguage;
+        this.targetLanguage = DEFAULT_SETTINGS.targetLanguage;
+        this.apiKey = null;
+        this.selectedModel = DEFAULT_SETTINGS.model;
+        
+        // Initialize API and feature managers
+        this.geminiAPI = null;
+        this.translationManager = null;
+        this.chatManager = null;
+    }
+
+    /**
+     * Initialize the application
+     */
+    async initialize() {
+        console.log('🚀 Initializing Get Fluent Now App...');
+        
+        // Set up event listeners
+        this.setupEventListeners();
+        
+        // Check for stored API key and auto-validate
+        const storedApiKey = localStorage.getItem('gemini_api_key');
+        if (storedApiKey) {
+            document.getElementById('gemini-api-key').value = storedApiKey;
+            await this.validateApiKey();
+        } else {
+            this.updateStatus('🔑 Please enter your Gemini API key to enable AI features');
+        }
+        
+        // Show app controls
+        document.getElementById('app-controls').style.display = 'block';
+        
+        // Initialize theme selector behavior
+        this.initializeThemeSelector();
+    }
+
+    /**
+     * Set up all event listeners
+     */
+    setupEventListeners() {
+        // Theme selector
+        const themeSelect = document.getElementById('story-theme');
+        if (themeSelect) {
+            themeSelect.addEventListener('change', () => this.handleThemeChange());
+        }
+
+        // Chat input
+        const chatInput = document.getElementById('chat-input');
+        if (chatInput) {
+            chatInput.addEventListener('keypress', (e) => this.handleChatKeyPress(e));
+        }
+
+        // Language selectors
+        const sourceLang = document.getElementById('source-lang');
+        const targetLang = document.getElementById('target-lang');
+        if (sourceLang) sourceLang.addEventListener('change', () => this.updateLanguages());
+        if (targetLang) targetLang.addEventListener('change', () => this.updateLanguages());
+
+        // Model radio buttons
+        const modelRadios = document.querySelectorAll('input[name="model"]');
+        modelRadios.forEach(radio => {
+            radio.addEventListener('change', () => this.updateModel());
+        });
+    }
+
+    /**
+     * Initialize theme selector behavior
+     */
+    initializeThemeSelector() {
+        const themeSelect = document.getElementById('story-theme');
+        const customContainer = document.getElementById('custom-theme-container');
+        
+        if (themeSelect && customContainer) {
+            // Set initial state
+            customContainer.style.display = themeSelect.value === 'custom' ? 'block' : 'none';
+        }
+    }
+
+    /**
+     * Update status message
+     */
+    updateStatus(message) {
+        const statusElement = document.getElementById('status');
+        if (statusElement) {
+            statusElement.textContent = message;
+        }
+    }
+
+    /**
+     * Validate the API key
+     */
+    async validateApiKey() {
+        const keyInput = document.getElementById('gemini-api-key');
+        if (!keyInput) return;
+
+        const apiKey = keyInput.value.trim();
+        if (!apiKey) {
+            this.updateStatus('❌ Please enter your Gemini API key');
+            return;
+        }
+
+        this.updateStatus('🔄 Validating API key...');
+
+        try {
+            // Create temporary API instance for validation
+            const tempAPI = new GeminiAPI(apiKey, this.selectedModel);
+            const result = await tempAPI.validateApiKey();
+
+            if (result.valid) {
+                this.apiKey = apiKey;
+                localStorage.setItem('gemini_api_key', apiKey);
+                
+                // Initialize API and managers
+                this.geminiAPI = tempAPI;
+                this.translationManager = new TranslationManager(this.geminiAPI);
+                this.chatManager = new ChatManager(this.geminiAPI);
+                this.chatManager.initializeChat();
+                
+                this.updateStatus('✅ API key validated! Ready to generate stories');
+            } else {
+                this.updateStatus(`❌ ${result.error}`);
+            }
+        } catch (error) {
+            console.error('API validation error:', error);
+            this.updateStatus('❌ Failed to validate API key');
+        }
+    }
+
+    /**
+     * Update the selected model
+     */
+    updateModel() {
+        const radioButtons = document.querySelectorAll('input[name="model"]');
+        for (const radio of radioButtons) {
+            if (radio.checked && this.geminiAPI) {
+                this.selectedModel = radio.value;
+                this.geminiAPI.setModel(this.selectedModel);
+                break;
+            }
+        }
+    }
+
+    /**
+     * Update language settings
+     */
+    updateLanguages() {
+        const sourceLang = document.getElementById('source-lang');
+        const targetLang = document.getElementById('target-lang');
+        
+        if (sourceLang && targetLang) {
+            this.sourceLanguage = sourceLang.value;
+            this.targetLanguage = targetLang.value;
+            
+            // Prevent same language selection
+            if (this.sourceLanguage === this.targetLanguage) {
+                this.updateStatus('⚠️ Source and target languages must be different');
+                return;
+            }
+            
+            // Update chat context if story exists
+            if (this.currentStory && this.chatManager) {
+                this.chatManager.updateContextWithStory(
+                    this.currentStory, 
+                    this.sourceLanguage, 
+                    this.targetLanguage
+                );
+            }
+        }
+    }
+
+    /**
+     * Swap source and target languages
+     */
+    swapLanguages() {
+        const sourceLang = document.getElementById('source-lang');
+        const targetLang = document.getElementById('target-lang');
+        
+        if (sourceLang && targetLang) {
+            const temp = sourceLang.value;
+            sourceLang.value = targetLang.value;
+            targetLang.value = temp;
+            this.updateLanguages();
+        }
+    }
+
+    /**
+     * Handle theme selection changes
+     */
+    handleThemeChange() {
+        const themeSelect = document.getElementById('story-theme');
+        const customContainer = document.getElementById('custom-theme-container');
+        
+        if (themeSelect && customContainer) {
+            const isCustom = themeSelect.value === 'custom';
+            customContainer.style.display = isCustom ? 'block' : 'none';
+            
+            if (isCustom) {
+                const customInput = document.getElementById('custom-theme-input');
+                if (customInput) customInput.focus();
+            }
+        }
+    }
+
+    /**
+     * Generate a new story
+     */
+    async generateStory() {
+        if (!this.geminiAPI) {
+            this.updateStatus('❌ Please validate your API key first');
+            return;
+        }
+
+        const difficultySelect = document.getElementById('difficulty-level');
+        const themeSelect = document.getElementById('story-theme');
+        const customInput = document.getElementById('custom-theme-input');
+        const storyOutput = document.getElementById('story-output');
+        const generateBtn = document.getElementById('generate-story-btn');
+        
+        if (!difficultySelect || !themeSelect || !storyOutput || !generateBtn) return;
+
+        const difficulty = difficultySelect.value;
+        const theme = themeSelect.value;
+        const customTheme = customInput ? customInput.value : null;
+
+        try {
+            // Update UI for generation state
+            generateBtn.textContent = '⏳ Generating...';
+            generateBtn.disabled = true;
+            storyOutput.textContent = 'Generating your story...';
+            this.updateStatus('✨ Generating story...');
+
+            // Get story parameters
+            const storyParams = getStoryParams(theme, customTheme);
+            
+            // Generate story
+            const story = await this.geminiAPI.generateStory(
+                languageNames[this.sourceLanguage],
+                difficulty,
+                storyParams.theme,
+                storyParams.variant
+            );
+
+            // Update UI with generated story
+            this.currentStory = story;
+            storyOutput.textContent = story;
+            storyOutput.classList.add('has-content');
+            
+            // Enable translation section
+            this.translationManager.setCurrentStory(story);
+            this.translationManager.showTranslationSection();
+            
+            // Update chat context
+            this.chatManager.updateContextWithStory(story, this.sourceLanguage, this.targetLanguage);
+            
+            this.updateStatus('✅ Story generated! Translate it to practice');
+
+        } catch (error) {
+            console.error('Story generation error:', error);
+            this.updateStatus('❌ Failed to generate story');
+            storyOutput.textContent = `Error: ${error.message}`;
+        } finally {
+            // Reset button state
+            generateBtn.textContent = '✨ Generate New Story';
+            generateBtn.disabled = false;
+        }
+    }
+
+    /**
+     * Submit translation for feedback
+     */
+    async submitTranslation() {
+        if (!this.translationManager) {
+            this.updateStatus('❌ Translation manager not initialized');
+            return;
+        }
+
+        const input = document.getElementById('translation-input');
+        const submitBtn = document.getElementById('submit-translation-btn');
+        const feedbackOutput = document.getElementById('feedback-output');
+        const miniLessonBtn = document.getElementById('mini-lesson-btn');
+        
+        if (!input || !submitBtn || !feedbackOutput) return;
+
+        const userTranslation = input.value.trim();
+        
+        try {
+            // Update UI for processing state
+            submitBtn.textContent = '⏳ Getting feedback...';
+            submitBtn.disabled = true;
+            feedbackOutput.textContent = 'Analyzing your translation...';
+            this.updateStatus('🔍 Analyzing your translation...');
+
+            // Process translation
+            const result = await this.translationManager.processTranslation(
+                userTranslation, 
+                this.sourceLanguage, 
+                this.targetLanguage
+            );
+
+            // Display feedback
+            this.translationManager.displayFeedback(feedbackOutput, result);
+            
+            // Show mini lesson button
+            if (miniLessonBtn) {
+                miniLessonBtn.style.display = 'inline-block';
+            }
+            
+            this.updateStatus('✅ Feedback provided! Check your translation');
+
+        } catch (error) {
+            console.error('Translation submission error:', error);
+            this.updateStatus('❌ Failed to process translation');
+            feedbackOutput.textContent = `Error: ${error.message}`;
+        } finally {
+            // Reset button state
+            submitBtn.textContent = '🎯 Get Feedback';
+            submitBtn.disabled = false;
+        }
+    }
+
+    /**
+     * Generate mini lesson
+     */
+    async generateMiniLesson() {
+        if (!this.translationManager) return;
+
+        const input = document.getElementById('translation-input');
+        const feedbackOutput = document.getElementById('feedback-output');
+        const miniLessonBtn = document.getElementById('mini-lesson-btn');
+        
+        if (!input || !feedbackOutput) return;
+
+        const userTranslation = input.value.trim();
+        
+        try {
+            // Update button state
+            if (miniLessonBtn) {
+                miniLessonBtn.textContent = '⏳ Creating lesson...';
+                miniLessonBtn.disabled = true;
+            }
+            this.updateStatus('📚 Creating personalized lesson...');
+
+            // Generate lesson
+            const lesson = await this.translationManager.generateMiniLesson(
+                userTranslation, 
+                this.sourceLanguage, 
+                this.targetLanguage
+            );
+
+            // Display lesson
+            this.translationManager.displayMiniLesson(lesson);
+            this.updateStatus('✅ Mini lesson ready!');
+
+        } catch (error) {
+            console.error('Mini lesson error:', error);
+            this.updateStatus('❌ Failed to generate lesson');
+        } finally {
+            // Reset button state
+            if (miniLessonBtn) {
+                miniLessonBtn.textContent = '📚 Mini Lesson';
+                miniLessonBtn.disabled = false;
+            }
+        }
+    }
+
+    /**
+     * Toggle chat widget
+     */
+    toggleChat() {
+        if (this.chatManager) {
+            this.chatManager.toggleChat();
+        }
+    }
+
+    /**
+     * Send chat message
+     */
+    async sendChatMessage() {
+        if (!this.chatManager) return;
+
+        const input = document.getElementById('chat-input');
+        if (input) {
+            await this.chatManager.sendMessage(input.value);
+        }
+    }
+
+    /**
+     * Handle chat key press events
+     */
+    handleChatKeyPress(event) {
+        if (this.chatManager) {
+            this.chatManager.handleKeyPress(event);
+        }
+    }
+
+    /**
+     * Show API help modal
+     */
+    showApiHelp() {
+        const modal = document.getElementById('help-modal');
+        if (modal) {
+            modal.style.display = 'flex';
+        }
+    }
+
+    /**
+     * Close API help modal
+     */
+    closeApiHelp() {
+        const modal = document.getElementById('help-modal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    }
+
+    /**
+     * Switch between feedback and lesson tabs
+     */
+    switchTab(tabName) {
+        if (this.translationManager) {
+            this.translationManager.switchTab(tabName);
+        }
+    }
+}
+
+// Initialize app when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    window.app = new LanguageLearningApp();
+    window.app.initialize();
+});
+
+// Expose app globally for inline event handlers
+export { LanguageLearningApp };

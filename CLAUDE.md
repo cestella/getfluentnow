@@ -22,7 +22,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Development Commands
 
 ```bash
-# Start local server for development
+# Development server with hot reload (runs on port 8000, accessible from network)
+npm run dev
+
+# Build for production (creates single HTML file)
+npm run build
+
+# Preview production build
+npm run preview
+
+# Legacy development server
 npm run serve
 # or
 python -m http.server 8000
@@ -31,12 +40,32 @@ python -m http.server 8000
 npm run lint
 ```
 
+### Development Server Configuration
+- **Port**: 8000 (configurable in `vite.config.js`)
+- **Network Access**: Binds to `0.0.0.0` so accessible from other machines
+- **Local URL**: `http://localhost:8000`
+- **Network URL**: `http://YOUR_IP:8000` (shown when server starts)
+
 ## Architecture
 
-The app is a streamlined single-page application with the following components:
+### Development Structure
+- **src/**: Source code organized in modules
+  - **index.html**: HTML template
+  - **css/**: Stylesheets
+  - **js/**: JavaScript modules
+    - **app.js**: Main application class
+    - **api/gemini.js**: Gemini API wrapper
+    - **features/**: Translation and chat features
+    - **utils/**: Constants and utilities
 
+### Production Build
+- **dist/index.html**: Single HTML file with inlined CSS and JavaScript (~75KB)
+
+### Key Components
 - **LanguageLearningApp class**: Main application logic and state management
-- **Gemini API Integration**: Story generation, translation, and chat assistance
+- **GeminiAPI class**: Dedicated API wrapper with error handling
+- **Translation Features**: Story generation, rating, and mini lessons
+- **Chat Features**: AI-powered translation assistance
 - **Responsive UI**: Mobile-friendly design with floating chat widget
 - **Help System**: Built-in guidance for API key setup
 

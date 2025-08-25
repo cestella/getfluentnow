@@ -44,15 +44,15 @@
                     <label class="radio-option">
                         <input type="radio" name="model" value="flash-lite" checked onchange="app.updateModel()">
                         <span class="radio-label">
-                            <strong>Gemini 1.5 Flash 8B</strong>
-                            <small>Fastest, most cost-effective</small>
+                            <strong>Gemini 2.5 Flash Lite</strong>
+                            <small>Latest model, fastest and most cost-effective</small>
                         </span>
                     </label>
                     <label class="radio-option">
                         <input type="radio" name="model" value="flash" onchange="app.updateModel()">
                         <span class="radio-label">
-                            <strong>Gemini 1.5 Flash</strong>
-                            <small>Balanced speed and quality</small>
+                            <strong>Gemini 2.5 Flash</strong>
+                            <small>Best price/performance, advanced capabilities</small>
                         </span>
                     </label>
                     <label class="radio-option">
@@ -156,6 +156,11 @@
             <!-- Translation Section -->
             <div id="translation-section" style="display: none;">
                 <h3>🔤 Your Translation</h3>
+                <!-- Story reference for mobile UX -->
+                <div id="story-reference">
+                    <h4>📖 Story to Translate:</h4>
+                    <div id="story-reference-text"></div>
+                </div>
                 <textarea 
                     id="translation-input" 
                     placeholder="Type your translation here..."

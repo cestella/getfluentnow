@@ -151,6 +151,12 @@ export class TranslationManager {
         if (section) {
             section.style.display = 'block';
             
+            // Update story reference for mobile UX
+            const storyReferenceText = document.getElementById('story-reference-text');
+            if (storyReferenceText && this.currentStory) {
+                storyReferenceText.textContent = this.currentStory;
+            }
+            
             // Clear previous input and feedback
             const input = document.getElementById('translation-input');
             const feedback = document.getElementById('feedback-output');

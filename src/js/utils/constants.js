@@ -21,8 +21,8 @@ export const languageNames = {
 
 // Available Gemini models with their API endpoints
 export const geminiModels = {
-    'flash-lite': 'gemini-1.5-flash-8b-latest',
-    'flash': 'gemini-1.5-flash-latest',
+    'flash-lite': 'gemini-2.5-flash-lite-preview-06-17',
+    'flash': 'gemini-2.5-flash',
     'pro': 'gemini-1.5-pro-latest'
 };
 

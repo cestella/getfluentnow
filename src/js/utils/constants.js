@@ -3,11 +3,19 @@
  * All constant values and configuration for the Get Fluent Now app
  */
 
-// Language display names mapping
+// Language display names mapping (all well-supported by Gemini API)
 export const languageNames = {
     'Spanish': 'español',
-    'Italian': 'italiano', 
     'French': 'français',
+    'Italian': 'italiano',
+    'German': 'Deutsch',
+    'Portuguese': 'português',
+    'Dutch': 'Nederlands',
+    'Russian': 'русский',
+    'Japanese': '日本語',
+    'Korean': '한국어',
+    'Chinese (Simplified)': '中文 (简体)',
+    'Arabic': 'العربية',
     'English': 'English'
 };
 

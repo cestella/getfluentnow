@@ -53,6 +53,27 @@ function inlineAssets() {
             }
         }
         
+        // Find and inline image assets (favicon files)
+        const imgMatches = html.matchAll(/href="([^"]*\.(png|ico|jpg|jpeg|svg|gif))"[^>]*/g);
+        for (const match of imgMatches) {
+            const imgPath = join(DIST_DIR, match[1]);
+            try {
+                const imgContent = readFileSync(imgPath);
+                const ext = match[2].toLowerCase();
+                const mimeType = ext === 'png' ? 'image/png' : 
+                                ext === 'ico' ? 'image/x-icon' :
+                                ext === 'svg' ? 'image/svg+xml' :
+                                ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' :
+                                ext === 'gif' ? 'image/gif' : 'image/png';
+                const base64 = imgContent.toString('base64');
+                const dataUri = `data:${mimeType};base64,${base64}`;
+                html = html.replace(match[1], dataUri);
+                console.log(`✅ Inlined image: ${match[1]}`);
+            } catch (err) {
+                console.warn(`⚠️  Could not inline image: ${match[1]}`);
+            }
+        }
+        
         // Write the final HTML file
         writeFileSync(OUTPUT_FILE, html, 'utf8');
         console.log(`✅ Created single-file build: ${OUTPUT_FILE}`);

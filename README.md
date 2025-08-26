@@ -13,8 +13,10 @@ AI-powered language learning application using Google Gemini API for story gener
 - **🎨 Theme Selection**: Choose from 12 preset themes or create custom story prompts
 - **📱 Mobile-Friendly**: Responsive design that works perfectly on all devices
 - **🎯 Tab System**: Switch between feedback and mini lessons without losing content
-- **⚡ Single-File Deployment**: Production build creates one 80KB HTML file with everything inlined
+- **⚡ Single-File Deployment**: Production build creates one HTML file (less than 1MB) with everything inlined
 - **🍔 About Modal**: Comprehensive hamburger menu with app information and GitHub link
+- **🎨 SVG Logo**: Custom speech bubble logo with "GFN" branding
+- **🌐 Community Footer**: Attribution and links to GitHub repository and issues
 
 ## 🚀 Quick Start
 
@@ -41,7 +43,7 @@ AI-powered language learning application using Google Gemini API for story gener
    ```bash
    npm run build
    ```
-   Creates a single `index.html` file (~80KB) with everything inlined
+   Creates a single `index.html` file (less than 1MB) with everything inlined
 
 4. **Preview production build:**
    ```bash
@@ -85,13 +87,13 @@ getfluentnow/
 │   └── inline-build.js    # Custom build script for asset inlining
 ├── vite.config.js         # Vite configuration for dev server & build
 ├── package.json           # Dependencies and npm scripts
-├── index.html             # 📦 Final production build (80KB, everything inlined)
+├── index.html             # 📦 Final production build (less than 1MB, everything inlined)
 └── CLAUDE.md              # Development guidelines for Claude Code
 ```
 
 ### Production Build
 - **Single HTML file** (`index.html`) with all CSS and JavaScript inlined
-- **80KB total size** - optimized and minified
+- **Less than 1MB total size** - optimized and minified
 - **One dependency**: Marked.js loaded from CDN for markdown parsing
 - **Zero-config deployment** - just upload the HTML file anywhere
 - **Works offline** once loaded (except for AI API calls)
@@ -103,6 +105,7 @@ getfluentnow/
 ```bash
 npm run dev          # Start development server (port 8000+, network accessible)
 npm run build        # Build production version (single HTML file with inlining)
+npm run build:auto   # Build production version then start dev server
 npm run build:dev    # Build without inlining (separate files in dist/)
 npm run preview      # Preview production build with Vite
 npm run serve        # Simple HTTP server on port 8000
@@ -134,7 +137,7 @@ npm run validate     # Browser dev tools validation reminder
 1. **Development**: Vite serves modular files with hot reload
 2. **Build**: Vite bundles and minifies all assets
 3. **Inline**: Custom script embeds CSS/JS into single HTML file
-4. **Deploy**: Upload single 80KB file - no server configuration needed
+4. **Deploy**: Upload single file (less than 1MB) - no server configuration needed
 
 ## 🔧 Customization & Extension
 

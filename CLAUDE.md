@@ -9,7 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Technology Stack
 
 - **Frontend**: Single HTML file with embedded JavaScript and CSS
-- **AI Service**: Google Gemini API (Gemini 1.5 Flash) for story generation and translation assistance
+- **AI Service**: Google Gemini API (Gemini 2.5 Flash/Pro) for story generation and translation assistance
 - **Dependencies**: Marked.js for markdown parsing (loaded via CDN)
 - **Storage**: LocalStorage for API key persistence
 
@@ -27,6 +27,9 @@ npm run dev
 
 # Build for production (creates single HTML file)
 npm run build
+
+# Build production then start dev server
+npm run build:auto
 
 # Preview production build
 npm run preview
@@ -50,8 +53,9 @@ npm run lint
 
 ### Development Structure
 - **src/**: Source code organized in modules
-  - **index.html**: HTML template
-  - **css/**: Stylesheets
+  - **index.html**: HTML template with SVG logo and footer
+  - **img/**: Favicon assets
+  - **css/**: Stylesheets with responsive design
   - **js/**: JavaScript modules
     - **app.js**: Main application class
     - **api/gemini.js**: Gemini API wrapper
@@ -59,7 +63,7 @@ npm run lint
     - **utils/**: Constants and utilities
 
 ### Production Build
-- **dist/index.html**: Single HTML file with inlined CSS and JavaScript (~75KB)
+- **index.html**: Single HTML file with inlined CSS and JavaScript (less than 1MB)
 
 ### Key Components
 - **LanguageLearningApp class**: Main application logic and state management
@@ -71,12 +75,15 @@ npm run lint
 
 ## Core Features
 
-- **AI Story Generation**: Create stories in Spanish, Italian, French, or English at different CEFR levels (A1-C1)
+- **AI Story Generation**: Create stories in 12+ languages at different CEFR levels (A1-C1)
 - **Theme Selection**: Preset themes plus custom theme input capability
 - **Translation Practice**: Users translate stories and receive AI feedback
 - **Chat Assistant**: Real-time help with translation questions and grammar
 - **Language Swapping**: Bidirectional translation support
 - **Markdown Feedback**: Rich formatting for AI evaluation responses
+- **SVG Logo**: Custom speech bubble logo with "GFN" branding
+- **About Modal**: Hamburger menu with comprehensive app information
+- **Community Footer**: Attribution and GitHub repository links
 
 ## API Key Setup
 

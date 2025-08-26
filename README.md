@@ -2,6 +2,8 @@
 
 AI-powered language learning application using Google Gemini API for story generation and translation practice. Built with modern web technologies and designed to work as a single HTML file for easy deployment.
 
+## 🚀 [**Try it live at getfluentnow.net**](http://getfluentnow.net) 🚀
+
 ## ✨ Features
 
 - **🤖 AI Story Generation**: Create stories in 12+ languages at different CEFR levels (A1-C1)
@@ -150,9 +152,9 @@ npm run validate     # Browser dev tools validation reminder
 Available models in `src/js/utils/constants.js`:
 ```javascript
 export const geminiModels = {
-    'flash-lite': 'gemini-1.5-flash-8b-latest',  // Fastest, most cost-effective
-    'flash': 'gemini-1.5-flash-latest',          // Balanced speed/quality  
-    'pro': 'gemini-1.5-pro-latest'               // Highest quality
+    'flash-lite': 'gemini-2.5-flash-lite-latest',  // Fastest, most cost-effective
+    'flash': 'gemini-2.5-flash-latest',            // Balanced speed/quality  
+    'pro': 'gemini-1.5-pro-latest'                 // Highest quality (1.5 still used for Pro)
 };
 ```
 

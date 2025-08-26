@@ -853,6 +853,36 @@ select:focus {
 }
 
 /* ==============================================
+   Footer Styles
+   ============================================== */
+#community-footer {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 20px;
+    margin-top: 40px;
+    text-align: center;
+    font-size: 0.9rem;
+}
+
+#community-footer p {
+    margin: 5px 0;
+    opacity: 0.8;
+}
+
+#community-footer a {
+    color: #ec4899;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
+
+#community-footer a:hover {
+    color: #f472b6;
+    text-decoration: underline;
+}
+
+/* ==============================================
    Enhanced Chat Widget with Resizing
    ============================================== */
 #chat-widget {

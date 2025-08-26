@@ -21,49 +21,56 @@
         <!-- Status Display -->
         <div id="status">🔑 Please enter your Gemini API key to enable AI chat</div>
 
-        <!-- API Key Configuration -->
-        <div id="api-section">
-            <div id="api-input-container">
-                <input 
-                    type="password" 
-                    id="gemini-api-key" 
-                    placeholder="Enter your Gemini API key" 
-                    autocomplete="off"
-                >
-                <button id="validate-key-btn" onclick="app.validateApiKey()">Validate Key</button>
-                <button id="help-btn" onclick="app.showApiHelp()">❓ Get API Key</button>
+        <!-- API Configuration Section -->
+        <div id="api-section" class="config-section">
+            <div id="api-header" class="config-header" onclick="app.toggleApiSection()">
+                <span id="api-status-indicator" class="status-indicator required">🔑</span>
+                <span id="api-header-text">API Configuration</span>
+                <span id="api-toggle-icon" class="toggle-icon">▼</span>
+            </div>
+            <div id="api-content" class="config-content expanded">
+                <div id="api-input-container">
+                    <input 
+                        type="password" 
+                        id="gemini-api-key" 
+                        placeholder="Enter your Gemini API key" 
+                        autocomplete="off"
+                    >
+                    <button id="validate-key-btn" onclick="app.validateApiKey()">Validate Key</button>
+                    <button id="help-btn" onclick="app.showApiHelp()">❓ Get API Key</button>
+                </div>
+                <!-- Model Selection -->
+                <div id="model-section">
+                    <h3>🧠 AI Model</h3>
+                    <div id="model-options">
+                        <label class="radio-option">
+                            <input type="radio" name="model" value="flash-lite" checked onchange="app.updateModel()">
+                            <span class="radio-label">
+                                <strong>Gemini 2.5 Flash Lite</strong>
+                                <small>Latest model, fastest and most cost-effective</small>
+                            </span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="model" value="flash" onchange="app.updateModel()">
+                            <span class="radio-label">
+                                <strong>Gemini 2.5 Flash</strong>
+                                <small>Best price/performance, advanced capabilities</small>
+                            </span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="model" value="pro" onchange="app.updateModel()">
+                            <span class="radio-label">
+                                <strong>Gemini 1.5 Pro</strong>
+                                <small>Highest quality, slower</small>
+                            </span>
+                        </label>
+                    </div>
+                </div>
             </div>
         </div>
 
         <!-- App Controls -->
         <div id="app-controls" style="display: none;">
-            <!-- Model Selection -->
-            <div id="model-section">
-                <h3>🧠 AI Model</h3>
-                <div id="model-options">
-                    <label class="radio-option">
-                        <input type="radio" name="model" value="flash-lite" checked onchange="app.updateModel()">
-                        <span class="radio-label">
-                            <strong>Gemini 2.5 Flash Lite</strong>
-                            <small>Latest model, fastest and most cost-effective</small>
-                        </span>
-                    </label>
-                    <label class="radio-option">
-                        <input type="radio" name="model" value="flash" onchange="app.updateModel()">
-                        <span class="radio-label">
-                            <strong>Gemini 2.5 Flash</strong>
-                            <small>Best price/performance, advanced capabilities</small>
-                        </span>
-                    </label>
-                    <label class="radio-option">
-                        <input type="radio" name="model" value="pro" onchange="app.updateModel()">
-                        <span class="radio-label">
-                            <strong>Gemini 1.5 Pro</strong>
-                            <small>Highest quality, slower</small>
-                        </span>
-                    </label>
-                </div>
-            </div>
 
             <!-- Language Configuration -->
             <div id="language-section">
@@ -155,19 +162,12 @@
 
             <!-- Translation Section -->
             <div id="translation-section" style="display: none;">
-                <h3>🔤 Your Translation</h3>
-                <!-- Story reference for mobile UX -->
-                <div id="story-reference">
-                    <h4>📖 Story to Translate:</h4>
-                    <div id="story-reference-text"></div>
+                <h3>🔤 Translate Each Sentence</h3>
+                <div id="sentence-translation-container">
+                    <!-- Sentence-by-sentence translation boxes will be generated here -->
                 </div>
-                <textarea 
-                    id="translation-input" 
-                    placeholder="Type your translation here..."
-                    rows="4"
-                ></textarea>
                 <div id="translation-controls">
-                    <button id="submit-translation-btn" onclick="app.submitTranslation()">
+                    <button id="submit-translation-btn" onclick="app.submitSentenceTranslations()">
                         🎯 Get Feedback
                     </button>
                     <button id="mini-lesson-btn" onclick="app.generateMiniLesson()" style="display: none;">
@@ -202,18 +202,27 @@
             <div id="chat-toggle" onclick="app.toggleChat()">💬</div>
             <div id="chat-container" style="display: none;">
                 <div id="chat-header">
-                    <h4>🤖 AI Assistant</h4>
-                    <button id="chat-close" onclick="app.toggleChat()">×</button>
+                    <div id="chat-header-content">
+                        <h4>🤖 AI Assistant</h4>
+                        <div id="chat-controls">
+                            <button id="chat-clear" onclick="app.clearChat()" title="Clear chat">🗑️</button>
+                            <button id="chat-minimize" onclick="app.minimizeChat()" title="Minimize">−</button>
+                            <button id="chat-close" onclick="app.toggleChat()" title="Close">×</button>
+                        </div>
+                    </div>
+                    <div id="chat-resize-handle"></div>
                 </div>
-                <div id="chat-messages"></div>
-                <div id="chat-input-container">
-                    <input 
-                        type="text" 
-                        id="chat-input" 
-                        placeholder="Ask about grammar, vocabulary, or translations..."
-                        onkeypress="app.handleChatKeyPress(event)"
-                    >
-                    <button id="chat-send-btn" onclick="app.sendChatMessage()">Send</button>
+                <div id="chat-body">
+                    <div id="chat-messages"></div>
+                    <div id="chat-input-container">
+                        <textarea 
+                            id="chat-input" 
+                            placeholder="Ask about grammar, vocabulary, or translations..."
+                            rows="1"
+                            onkeydown="app.handleChatKeyPress(event)"
+                        ></textarea>
+                        <button id="chat-send-btn" onclick="app.sendChatMessage()">Send</button>
+                    </div>
                 </div>
             </div>
         </div>

@@ -7,6 +7,7 @@ export class TranslationManager {
     constructor(geminiAPI) {
         this.geminiAPI = geminiAPI;
         this.currentStory = null;
+        this.currentSentences = [];
         this.referenceTranslation = null;
     }
 
@@ -16,6 +17,14 @@ export class TranslationManager {
     setCurrentStory(story) {
         this.currentStory = story;
         this.referenceTranslation = null;
+    }
+
+    /**
+     * Set structured sentences for sentence-by-sentence translation
+     */
+    setCurrentSentences(sentences) {
+        this.currentSentences = sentences;
+        this.currentStory = sentences.join(' ');
     }
 
     /**
@@ -85,6 +94,111 @@ export class TranslationManager {
     }
 
     /**
+     * Generate mini lesson based on sentence translations
+     */
+    async generateSentenceMiniLesson(userTranslations, sourceLanguage, targetLanguage) {
+        if (!userTranslations || userTranslations.length === 0) {
+            throw new Error('No translations provided for mini lesson');
+        }
+
+        try {
+            const lesson = await this.geminiAPI.generateSentenceMiniLesson(
+                userTranslations,
+                sourceLanguage,
+                targetLanguage
+            );
+
+            return lesson;
+        } catch (error) {
+            console.error('Sentence mini lesson generation error:', error);
+            throw new Error(`Failed to generate lesson: ${error.message}`);
+        }
+    }
+
+    /**
+     * Process sentence-by-sentence translations
+     */
+    async processSentenceTranslations(sourceLanguage, targetLanguage) {
+        if (!this.currentSentences || this.currentSentences.length === 0) {
+            throw new Error('No sentences available for translation');
+        }
+
+        // Collect user translations from the UI
+        const userTranslations = [];
+        for (let i = 0; i < this.currentSentences.length; i++) {
+            const input = document.getElementById(`sentence-translation-${i}`);
+            userTranslations.push(input ? input.value.trim() : '');
+        }
+
+        try {
+            const result = await this.geminiAPI.rateSentenceTranslations(
+                this.currentSentences,
+                userTranslations,
+                sourceLanguage,
+                targetLanguage
+            );
+
+            return result;
+        } catch (error) {
+            console.error('Sentence translation processing error:', error);
+            throw new Error(`Failed to process translations: ${error.message}`);
+        }
+    }
+
+    /**
+     * Display sentence translation feedback in the UI
+     */
+    displaySentenceFeedback(feedbackElement, result) {
+        if (!feedbackElement) return;
+
+        const overallFeedback = (typeof marked !== 'undefined' && marked.parse) 
+            ? marked.parse(result.overallFeedback) 
+            : result.overallFeedback;
+
+        let sentenceFeedbackHtml = '';
+        result.sentenceFeedback.forEach((item, index) => {
+            const feedback = (typeof marked !== 'undefined' && marked.parse) 
+                ? marked.parse(item.feedback) 
+                : item.feedback;
+
+            sentenceFeedbackHtml += `
+                <div class="sentence-feedback-item">
+                    <h5>Sentence ${item.sentenceIndex + 1}</h5>
+                    <div class="sentence-feedback-original">
+                        <strong>Original:</strong> <em>"${item.original}"</em>
+                    </div>
+                    <div class="sentence-feedback-user">
+                        <strong>Your translation:</strong> "${item.userTranslation}"
+                    </div>
+                    <div class="sentence-feedback-reference">
+                        <strong>Reference:</strong> <em>"${item.referenceTranslation}"</em>
+                    </div>
+                    <div class="sentence-feedback-content">
+                        ${feedback}
+                    </div>
+                </div>
+            `;
+        });
+        
+        feedbackElement.innerHTML = `
+            <div class="feedback-content">
+                <div class="overall-feedback">
+                    <h4>📊 Overall Performance</h4>
+                    <p><strong>Translated:</strong> ${result.translatedCount} out of ${result.totalSentences} sentences</p>
+                    ${overallFeedback}
+                </div>
+                <div class="sentence-feedback">
+                    <h4>💬 Individual Sentence Feedback</h4>
+                    ${sentenceFeedbackHtml}
+                </div>
+            </div>
+        `;
+        
+        // Show tabs and activate feedback tab
+        this.showResultsTabs('feedback');
+    }
+
+    /**
      * Display translation feedback in the UI
      */
     displayFeedback(feedbackElement, result) {
@@ -119,19 +233,131 @@ export class TranslationManager {
         const lessonElement = document.getElementById('lesson-output');
         if (!lessonElement) return;
 
-        const formattedLesson = (typeof marked !== 'undefined' && marked.parse) 
-            ? marked.parse(lesson) 
-            : lesson;
-        
-        lessonElement.innerHTML = `
-            <div class="mini-lesson-content">
-                <h4>📚 Mini Lesson</h4>
-                ${formattedLesson}
-            </div>
-        `;
+        // Check if lesson is structured JSON or plain text
+        if (typeof lesson === 'object' && lesson.title) {
+            this.displayStructuredMiniLesson(lesson, lessonElement);
+        } else {
+            // Fallback to simple text lesson
+            const formattedLesson = (typeof marked !== 'undefined' && marked.parse) 
+                ? marked.parse(lesson) 
+                : lesson;
+            
+            lessonElement.innerHTML = `
+                <div class="mini-lesson-content">
+                    <h4>📚 Mini Lesson</h4>
+                    ${formattedLesson}
+                </div>
+            `;
+        }
         
         // Show tabs and activate lesson tab
         this.showResultsTabs('lesson');
+    }
+
+    /**
+     * Display structured mini lesson with interactive exercises
+     */
+    displayStructuredMiniLesson(lesson, lessonElement) {
+        // Generate vocabulary HTML
+        const vocabularyHtml = lesson.vocabulary.map(vocab => `
+            <div class="vocabulary-item">
+                <strong>${vocab.word}</strong> - ${vocab.meaning}
+                <div class="vocabulary-example"><em>${vocab.example}</em></div>
+            </div>
+        `).join('');
+
+        // Generate mistakes HTML
+        const mistakesHtml = lesson.commonMistakes.map(mistake => `
+            <div class="mistake-item">
+                <div class="mistake-pattern">❌ ${mistake.mistake}</div>
+                <div class="mistake-correction">✅ ${mistake.correction}</div>
+                <div class="mistake-example"><em>${mistake.example}</em></div>
+            </div>
+        `).join('');
+
+        // Generate exercises HTML
+        const exercisesHtml = lesson.exercises.map((exercise, index) => `
+            <div class="exercise-item" data-exercise-id="${index}">
+                <div class="exercise-header">
+                    <h5>Exercise ${index + 1}: ${exercise.type.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}</h5>
+                </div>
+                <div class="exercise-instruction">${exercise.instruction}</div>
+                <div class="exercise-question">${exercise.question}</div>
+                <div class="exercise-answer-section">
+                    <button class="show-answer-btn" onclick="app.toggleExerciseAnswer(${index})">
+                        Show Answer
+                    </button>
+                    <div class="exercise-answer" id="exercise-answer-${index}" style="display: none;">
+                        <div class="answer-text"><strong>Answer:</strong> ${exercise.answer}</div>
+                        <div class="answer-explanation"><strong>Explanation:</strong> ${exercise.explanation}</div>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+
+        lessonElement.innerHTML = `
+            <div class="structured-mini-lesson">
+                <div class="lesson-header">
+                    <h4>📚 ${lesson.title}</h4>
+                </div>
+                
+                <div class="lesson-section grammar-section">
+                    <h5>📖 Grammar Focus</h5>
+                    <p>${lesson.grammarFocus}</p>
+                </div>
+                
+                <div class="lesson-section vocabulary-section">
+                    <h5>📝 Key Vocabulary</h5>
+                    <div class="vocabulary-list">
+                        ${vocabularyHtml}
+                    </div>
+                </div>
+                
+                <div class="lesson-section mistakes-section">
+                    <h5>⚠️ Common Mistakes</h5>
+                    <div class="mistakes-list">
+                        ${mistakesHtml}
+                    </div>
+                </div>
+                
+                <div class="lesson-section exercises-section">
+                    <h5>💪 Practice Exercises</h5>
+                    <div class="exercises-list">
+                        ${exercisesHtml}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * Generate sentence-by-sentence translation interface
+     */
+    generateSentenceInterface(sentences) {
+        const container = document.getElementById('sentence-translation-container');
+        if (!container) return;
+
+        container.innerHTML = '';
+        
+        sentences.forEach((sentence, index) => {
+            const sentencePair = document.createElement('div');
+            sentencePair.className = 'sentence-pair';
+            
+            sentencePair.innerHTML = `
+                <div class="sentence-original">
+                    <span class="sentence-number">Sentence ${index + 1}:</span>
+                    ${sentence}
+                </div>
+                <textarea 
+                    id="sentence-translation-${index}"
+                    class="sentence-translation-input" 
+                    placeholder="Type your translation here..."
+                    rows="2"
+                ></textarea>
+            `;
+            
+            container.appendChild(sentencePair);
+        });
     }
 
     /**
@@ -139,6 +365,7 @@ export class TranslationManager {
      */
     clear() {
         this.currentStory = null;
+        this.currentSentences = [];
         this.referenceTranslation = null;
     }
 
@@ -151,19 +378,16 @@ export class TranslationManager {
         if (section) {
             section.style.display = 'block';
             
-            // Update story reference for mobile UX
-            const storyReferenceText = document.getElementById('story-reference-text');
-            if (storyReferenceText && this.currentStory) {
-                storyReferenceText.textContent = this.currentStory;
+            // Generate sentence interface if we have structured sentences
+            if (this.currentSentences && this.currentSentences.length > 0) {
+                this.generateSentenceInterface(this.currentSentences);
             }
             
-            // Clear previous input and feedback
-            const input = document.getElementById('translation-input');
+            // Clear previous feedback
             const feedback = document.getElementById('feedback-output');
             const lessonOutput = document.getElementById('lesson-output');
             const miniLessonBtn = document.getElementById('mini-lesson-btn');
             
-            if (input) input.value = '';
             if (feedback) {
                 feedback.innerHTML = '';
                 feedback.classList.remove('has-content');

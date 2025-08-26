@@ -28,6 +28,11 @@ export class ChatManager {
         if (!container || !toggle) return;
 
         this.isOpen = !this.isOpen;
+        
+        // Update context with current state when chat opens
+        if (this.isOpen) {
+            this.updateContextFromCurrentState();
+        }
         container.style.display = this.isOpen ? 'block' : 'none';
         
         // Update toggle appearance
@@ -61,8 +66,11 @@ export class ChatManager {
             // Show typing indicator
             this.showTypingIndicator();
 
-            // Get AI response
-            const response = await this.geminiAPI.chat(trimmedMessage, this.context);
+            // Update context with current state before sending to AI
+            this.updateContextFromCurrentState();
+
+            // Get AI response with current context
+            const response = await this.geminiAPI.chat(trimmedMessage, this.formatContextForAI());
             
             // Remove typing indicator and add AI response
             this.hideTypingIndicator();
@@ -101,7 +109,21 @@ export class ChatManager {
         }
         
         messagesContainer.appendChild(messageElement);
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        
+        // Auto-scroll to the new message
+        this.scrollToBottom();
+    }
+
+    /**
+     * Scroll to the bottom of the chat messages
+     */
+    scrollToBottom() {
+        const messagesContainer = document.getElementById('chat-messages');
+        if (messagesContainer) {
+            setTimeout(() => {
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }, 100); // Small delay to ensure content is rendered
+        }
     }
 
     /**
@@ -117,7 +139,9 @@ export class ChatManager {
         typingElement.id = 'typing-indicator';
         
         messagesContainer.appendChild(typingElement);
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        
+        // Auto-scroll to show typing indicator
+        this.scrollToBottom();
     }
 
     /**
@@ -131,12 +155,17 @@ export class ChatManager {
     }
 
     /**
-     * Handle Enter key press in chat input
+     * Handle key press in chat input (now textarea)
      */
     handleKeyPress(event) {
+        const input = event.target;
+        
+        // Auto-resize textarea
+        input.style.height = 'auto';
+        input.style.height = Math.min(input.scrollHeight, 100) + 'px';
+        
         if (event.key === 'Enter' && !event.shiftKey) {
             event.preventDefault();
-            const input = event.target;
             this.sendMessage(input.value);
         }
     }
@@ -168,7 +197,128 @@ export class ChatManager {
     }
 
     /**
-     * Update context with current story for more relevant help
+     * Update context based on current application state
+     */
+    updateContextFromCurrentState() {
+        const context = {
+            timestamp: Date.now(),
+            sourceLanguage: null,
+            targetLanguage: null,
+            currentStory: null,
+            sentences: [],
+            userTranslations: [],
+            feedback: null,
+            miniLesson: null
+        };
+
+        // Get language settings from app
+        const sourceLang = document.getElementById('source-lang');
+        const targetLang = document.getElementById('target-lang');
+        if (sourceLang && targetLang) {
+            context.sourceLanguage = sourceLang.value;
+            context.targetLanguage = targetLang.value;
+        }
+
+        // Get current story
+        const storyOutput = document.getElementById('story-output');
+        if (storyOutput && storyOutput.textContent && storyOutput.classList.contains('has-content')) {
+            context.currentStory = storyOutput.textContent.trim();
+        }
+
+        // Get sentence translations if using sentence-by-sentence mode
+        const sentenceContainer = document.getElementById('sentence-translation-container');
+        if (sentenceContainer && sentenceContainer.children.length > 0) {
+            // Extract sentences from the interface
+            const sentencePairs = Array.from(sentenceContainer.children);
+            sentencePairs.forEach((pair, index) => {
+                const originalDiv = pair.querySelector('.sentence-original');
+                const translationInput = pair.querySelector('.sentence-translation-input');
+                
+                if (originalDiv && translationInput) {
+                    const originalText = originalDiv.textContent.replace(/^Sentence \d+:\s*/, '').trim();
+                    const userTranslation = translationInput.value.trim();
+                    
+                    context.sentences.push(originalText);
+                    if (userTranslation) {
+                        context.userTranslations.push({
+                            sentenceIndex: index,
+                            original: originalText,
+                            translation: userTranslation
+                        });
+                    }
+                }
+            });
+        }
+
+        // Get current feedback if available
+        const feedbackOutput = document.getElementById('feedback-output');
+        if (feedbackOutput && feedbackOutput.innerHTML.trim()) {
+            // Extract text content without HTML
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = feedbackOutput.innerHTML;
+            context.feedback = tempDiv.textContent.trim();
+        }
+
+        // Get current mini lesson if available
+        const lessonOutput = document.getElementById('lesson-output');
+        if (lessonOutput && lessonOutput.innerHTML.trim()) {
+            // Extract text content without HTML
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = lessonOutput.innerHTML;
+            context.miniLesson = tempDiv.textContent.trim();
+        }
+
+        this.context = context;
+    }
+
+    /**
+     * Format context for AI in a readable way
+     */
+    formatContextForAI() {
+        if (!this.context) return null;
+
+        let contextString = "CURRENT SESSION CONTEXT:\n\n";
+        
+        // Language settings
+        if (this.context.sourceLanguage && this.context.targetLanguage) {
+            contextString += `Learning languages: ${this.context.sourceLanguage} → ${this.context.targetLanguage}\n\n`;
+        }
+
+        // Current story
+        if (this.context.currentStory) {
+            contextString += `STORY TO TRANSLATE:\n${this.context.currentStory}\n\n`;
+        }
+
+        // User's sentence translations
+        if (this.context.userTranslations && this.context.userTranslations.length > 0) {
+            contextString += `USER'S TRANSLATION ATTEMPTS:\n`;
+            this.context.userTranslations.forEach((item, index) => {
+                contextString += `${index + 1}. Original: "${item.original}"\n   User translation: "${item.translation}"\n`;
+            });
+            contextString += "\n";
+        }
+
+        // Current feedback
+        if (this.context.feedback) {
+            contextString += `CURRENT FEEDBACK:\n${this.context.feedback}\n\n`;
+        }
+
+        // Current mini lesson
+        if (this.context.miniLesson) {
+            contextString += `CURRENT MINI LESSON:\n${this.context.miniLesson}\n\n`;
+        }
+
+        // If no meaningful content, return null
+        if (contextString === "CURRENT SESSION CONTEXT:\n\n") {
+            return null;
+        }
+
+        contextString += "Please help the user based on their current learning session context above.";
+        return contextString;
+    }
+
+    /**
+     * Update context with current story for more relevant help (legacy method)
      */
     updateContextWithStory(story, sourceLanguage, targetLanguage) {
         this.context = {

@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Get Fluent Now - AI Language Learning</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16x16.png">
+    <link rel="icon" type="image/png" sizes="48x48" href="/img/favicon-48x48.png">
     <!-- Marked.js for markdown parsing -->
     <script src="https://cdn.jsdelivr.net/npm/marked@12.0.0/marked.min.js"></script>
     <!-- CSS -->
@@ -14,7 +18,38 @@
     <div id="main-container">
         <!-- Header Section -->
         <div id="header">
-            <h1 id="main-title">Get Fluent Now 🌍</h1>
+            <div id="header-top">
+                <button id="hamburger-menu" onclick="app.toggleAboutMenu()">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+                <div id="about-dropdown" style="display: none;">
+                    <button onclick="app.showAboutModal()">About</button>
+                </div>
+            </div>
+            <div id="title-container">
+                <div id="logo-svg">
+                    <svg viewBox="0 0 120 60" xmlns="http://www.w3.org/2000/svg">
+                        <!-- Speech bubble -->
+                        <path d="M15 10 Q10 10 10 15 L10 35 Q10 40 15 40 L35 40 L45 50 L42 40 L95 40 Q100 40 100 35 L100 15 Q100 10 95 10 Z" 
+                              fill="url(#bubbleGradient)" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
+                        
+                        <!-- Text GFN -->
+                        <text x="55" y="32" text-anchor="middle" class="logo-text">GFN</text>
+                        
+                        <!-- Gradient definitions -->
+                        <defs>
+                            <linearGradient id="bubbleGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:#4f46e5;stop-opacity:1" />
+                                <stop offset="50%" style="stop-color:#7c3aed;stop-opacity:1" />
+                                <stop offset="100%" style="stop-color:#ec4899;stop-opacity:1" />
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                </div>
+                <h1 id="main-title">Get Fluent Now</h1>
+            </div>
             <p id="subtitle">AI-powered language learning with Google Gemini</p>
         </div>
 
@@ -255,6 +290,52 @@
                 <div class="help-note">
                     <p><strong>✅ Free tier includes:</strong> 15 requests per minute, 1 million tokens per day</p>
                     <p><strong>🔒 Privacy:</strong> Your API key is stored locally in your browser only</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- About Modal -->
+    <div id="about-modal" style="display: none;">
+        <div id="about-content">
+            <div id="about-header">
+                <h2>🌍 About Get Fluent Now</h2>
+                <button id="close-about" onclick="app.closeAboutModal()">×</button>
+            </div>
+            <div id="about-body">
+                <div class="about-section">
+                    <h3>What is Get Fluent Now?</h3>
+                    <p>Get Fluent Now is an AI-powered language learning application that helps you practice translation skills through interactive stories and personalized feedback.</p>
+                </div>
+                
+                <div class="about-section">
+                    <h3>✨ Features</h3>
+                    <ul>
+                        <li><strong>AI Story Generation:</strong> Generate stories in 12 languages at different CEFR levels (A1-C1)</li>
+                        <li><strong>Sentence-by-Sentence Practice:</strong> Translate individual sentences for targeted learning</li>
+                        <li><strong>Intelligent Feedback:</strong> Get detailed AI feedback on your translations</li>
+                        <li><strong>Interactive Lessons:</strong> Structured mini-lessons with exercises and answer keys</li>
+                        <li><strong>Smart Chat Assistant:</strong> Context-aware AI help for grammar and vocabulary questions</li>
+                        <li><strong>Theme Variety:</strong> Choose from 12 preset themes or create custom scenarios</li>
+                    </ul>
+                </div>
+                
+                <div class="about-section">
+                    <h3>🔒 Privacy & Security</h3>
+                    <p>Your API key is stored locally in your browser and only sent to Google's Gemini AI servers. No data is collected or stored externally.</p>
+                </div>
+                
+                <div class="about-section">
+                    <h3>💻 Open Source</h3>
+                    <p>Get Fluent Now is open source and available on GitHub:</p>
+                    <a href="https://github.com/cestella/getfluentnow" target="_blank" class="github-link">
+                        📂 View on GitHub
+                    </a>
+                </div>
+                
+                <div class="about-section">
+                    <h3>🛠️ Technology</h3>
+                    <p>Built with vanilla JavaScript, powered by Google Gemini 2.5 AI models, and packaged as a single HTML file for easy deployment.</p>
                 </div>
             </div>
         </div>

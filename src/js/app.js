@@ -620,6 +620,61 @@ class LanguageLearningApp {
             buttonElement.classList.toggle('answer-shown', isHidden);
         }
     }
+
+    /**
+     * Toggle about menu dropdown
+     */
+    toggleAboutMenu() {
+        const dropdown = document.getElementById('about-dropdown');
+        if (dropdown) {
+            const isVisible = dropdown.style.display === 'block';
+            dropdown.style.display = isVisible ? 'none' : 'block';
+            
+            // Close dropdown when clicking outside
+            if (!isVisible) {
+                setTimeout(() => {
+                    document.addEventListener('click', this.closeAboutDropdown.bind(this), { once: true });
+                }, 100);
+            }
+        }
+    }
+
+    /**
+     * Close about dropdown
+     */
+    closeAboutDropdown(event) {
+        const dropdown = document.getElementById('about-dropdown');
+        const hamburger = document.getElementById('hamburger-menu');
+        
+        if (dropdown && !dropdown.contains(event.target) && !hamburger.contains(event.target)) {
+            dropdown.style.display = 'none';
+        }
+    }
+
+    /**
+     * Show about modal
+     */
+    showAboutModal() {
+        const modal = document.getElementById('about-modal');
+        const dropdown = document.getElementById('about-dropdown');
+        
+        if (modal) {
+            modal.style.display = 'flex';
+        }
+        if (dropdown) {
+            dropdown.style.display = 'none';
+        }
+    }
+
+    /**
+     * Close about modal
+     */
+    closeAboutModal() {
+        const modal = document.getElementById('about-modal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    }
 }
 
 // Initialize app when DOM is loaded

@@ -4,14 +4,15 @@ AI-powered language learning application using Google Gemini API for story gener
 
 ## ✨ Features
 
-- **🤖 AI Story Generation**: Create stories in Spanish, Italian, French, or English at different CEFR levels (A1-C1)
+- **🤖 AI Story Generation**: Create stories in 12+ languages at different CEFR levels (A1-C1)
 - **📝 Translation Practice**: Translate AI-generated stories and receive detailed AI feedback with markdown formatting
 - **📚 Mini Lessons**: Get personalized grammar and vocabulary lessons based on your translation attempts
 - **💬 Chat Assistant**: Real-time help with translation questions, grammar, and vocabulary
 - **🎨 Theme Selection**: Choose from 12 preset themes or create custom story prompts
 - **📱 Mobile-Friendly**: Responsive design that works perfectly on all devices
 - **🎯 Tab System**: Switch between feedback and mini lessons without losing content
-- **⚡ Single-File Deployment**: Production build creates one 43KB HTML file with everything inlined
+- **⚡ Single-File Deployment**: Production build creates one 80KB HTML file with everything inlined
+- **🍔 About Modal**: Comprehensive hamburger menu with app information and GitHub link
 
 ## 🚀 Quick Start
 
@@ -23,7 +24,7 @@ AI-powered language learning application using Google Gemini API for story gener
 
 1. **Clone and install:**
    ```bash
-   git clone <your-repo-url>
+   git clone https://github.com/cestella/getfluentnow.git
    cd getfluentnow
    npm install
    ```
@@ -38,7 +39,7 @@ AI-powered language learning application using Google Gemini API for story gener
    ```bash
    npm run build
    ```
-   Creates a single `index.html` file (~43KB) with everything inlined
+   Creates a single `index.html` file (~80KB) with everything inlined
 
 4. **Preview production build:**
    ```bash
@@ -62,6 +63,10 @@ AI-powered language learning application using Google Gemini API for story gener
 getfluentnow/
 ├── src/                    # Source files for development
 │   ├── index.html         # HTML template
+│   ├── img/               # Favicon and logo assets
+│   │   ├── favicon-16x16.png
+│   │   ├── favicon-32x32.png
+│   │   └── favicon-48x48.png
 │   ├── css/
 │   │   └── main.css       # Comprehensive stylesheet with markdown styling
 │   └── js/
@@ -78,13 +83,13 @@ getfluentnow/
 │   └── inline-build.js    # Custom build script for asset inlining
 ├── vite.config.js         # Vite configuration for dev server & build
 ├── package.json           # Dependencies and npm scripts
-├── index.html             # 📦 Final production build (43KB, everything inlined)
+├── index.html             # 📦 Final production build (80KB, everything inlined)
 └── CLAUDE.md              # Development guidelines for Claude Code
 ```
 
 ### Production Build
 - **Single HTML file** (`index.html`) with all CSS and JavaScript inlined
-- **43KB total size** - optimized and minified
+- **80KB total size** - optimized and minified
 - **One dependency**: Marked.js loaded from CDN for markdown parsing
 - **Zero-config deployment** - just upload the HTML file anywhere
 - **Works offline** once loaded (except for AI API calls)
@@ -107,7 +112,7 @@ npm run validate     # Browser dev tools validation reminder
 
 - **⚡ Vite** - Lightning-fast build tool and dev server with HMR
 - **📦 ES Modules** - Modern JavaScript with clean imports/exports
-- **🤖 Google Gemini API** - Multiple models (Flash 8B, Flash, Pro) for AI generation
+- **🤖 Google Gemini API** - Multiple models (Flash Lite, Flash, Pro) for AI generation
 - **📝 Marked.js** - Professional markdown parsing for rich formatted feedback
 - **🎯 Tab System** - Custom-built tab interface for feedback/lessons
 - **📱 Responsive CSS** - Mobile-first design with CSS Grid/Flexbox
@@ -127,7 +132,7 @@ npm run validate     # Browser dev tools validation reminder
 1. **Development**: Vite serves modular files with hot reload
 2. **Build**: Vite bundles and minifies all assets
 3. **Inline**: Custom script embeds CSS/JS into single HTML file
-4. **Deploy**: Upload single 43KB file - no server configuration needed
+4. **Deploy**: Upload single 80KB file - no server configuration needed
 
 ## 🔧 Customization & Extension
 

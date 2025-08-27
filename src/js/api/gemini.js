@@ -204,6 +204,7 @@ Requirements:
 - Use ONLY grammar structures appropriate for ${level.toUpperCase()} level
 - Make it engaging and culturally appropriate
 - Focus on everyday, relatable situations
+- Generate exactly 6-10 sentences (maximum 10 sentences)
 
 Break the story into individual sentences for translation practice.`;
 
@@ -215,7 +216,9 @@ Break the story into individual sentences for translation practice.`;
                     items: {
                         type: "string"
                     },
-                    description: "Array of individual sentences that make up the story"
+                    minItems: 6,
+                    maxItems: 10,
+                    description: "Array of individual sentences that make up the story (6-10 sentences maximum)"
                 }
             },
             required: ["sentences"]
@@ -224,7 +227,9 @@ Break the story into individual sentences for translation practice.`;
         try {
             const response = await this.makeStructuredRequest(prompt, schema, systemPrompt);
             const parsed = JSON.parse(response);
-            return parsed.sentences || [];
+            let sentences = parsed.sentences || [];
+            // Ensure max 10 sentences
+            return sentences.slice(0, 10);
         } catch (error) {
             console.error('Structured generation failed, falling back to regular generation:', error);
             // Fallback: use regular generation and parse manually
@@ -235,14 +240,18 @@ Break the story into individual sentences for translation practice.`;
             if (jsonMatch) {
                 try {
                     const parsed = JSON.parse(jsonMatch[1]);
-                    return parsed.sentences || [];
+                    let sentences = parsed.sentences || [];
+                    // Ensure max 10 sentences
+                    return sentences.slice(0, 10);
                 } catch (parseError) {
                     console.error('Failed to parse extracted JSON:', parseError);
                 }
             }
             
             // Final fallback: split by sentences
-            return fallbackResponse.split(/[.!?]+/).filter(s => s.trim().length > 0).map(s => s.trim() + '.');
+            let sentences = fallbackResponse.split(/[.!?]+/).filter(s => s.trim().length > 0).map(s => s.trim() + '.');
+            // Ensure max 10 sentences
+            return sentences.slice(0, 10);
         }
     }
 

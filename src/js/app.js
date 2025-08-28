@@ -43,6 +43,9 @@ class LanguageLearningApp {
             this.updateStatus('🔑 Please enter your Gemini API key to enable AI features');
         }
         
+        // Load saved user preferences
+        this.loadUserPreferences();
+        
         // Show app controls
         document.getElementById('app-controls').style.display = 'block';
         
@@ -57,7 +60,16 @@ class LanguageLearningApp {
         // Theme selector
         const themeSelect = document.getElementById('story-theme');
         if (themeSelect) {
-            themeSelect.addEventListener('change', () => this.handleThemeChange());
+            themeSelect.addEventListener('change', () => {
+                this.handleThemeChange();
+                this.saveUserPreferences();
+            });
+        }
+
+        // Difficulty level selector
+        const difficultySelect = document.getElementById('difficulty-level');
+        if (difficultySelect) {
+            difficultySelect.addEventListener('change', () => this.saveUserPreferences());
         }
 
         // Chat input
@@ -245,6 +257,9 @@ class LanguageLearningApp {
         if (sourceLang && targetLang) {
             this.sourceLanguage = sourceLang.value;
             this.targetLanguage = targetLang.value;
+            
+            // Save preferences
+            this.saveUserPreferences();
             
             // Prevent same language selection
             if (this.sourceLanguage === this.targetLanguage) {
@@ -673,6 +688,59 @@ class LanguageLearningApp {
         const modal = document.getElementById('about-modal');
         if (modal) {
             modal.style.display = 'none';
+        }
+    }
+
+    /**
+     * Save user preferences to localStorage
+     */
+    saveUserPreferences() {
+        const preferences = {
+            sourceLanguage: this.sourceLanguage,
+            targetLanguage: this.targetLanguage,
+            difficultyLevel: document.getElementById('difficulty-level')?.value || DEFAULT_SETTINGS.difficulty,
+            theme: document.getElementById('story-theme')?.value || DEFAULT_SETTINGS.theme
+        };
+        
+        localStorage.setItem('user_preferences', JSON.stringify(preferences));
+    }
+
+    /**
+     * Load user preferences from localStorage
+     */
+    loadUserPreferences() {
+        try {
+            const stored = localStorage.getItem('user_preferences');
+            if (!stored) return;
+            
+            const preferences = JSON.parse(stored);
+            
+            // Restore language selections
+            const sourceLang = document.getElementById('source-lang');
+            const targetLang = document.getElementById('target-lang');
+            if (sourceLang && preferences.sourceLanguage) {
+                sourceLang.value = preferences.sourceLanguage;
+                this.sourceLanguage = preferences.sourceLanguage;
+            }
+            if (targetLang && preferences.targetLanguage) {
+                targetLang.value = preferences.targetLanguage;
+                this.targetLanguage = preferences.targetLanguage;
+            }
+            
+            // Restore difficulty level
+            const difficultyLevel = document.getElementById('difficulty-level');
+            if (difficultyLevel && preferences.difficultyLevel) {
+                difficultyLevel.value = preferences.difficultyLevel;
+            }
+            
+            // Restore theme
+            const storyTheme = document.getElementById('story-theme');
+            if (storyTheme && preferences.theme) {
+                storyTheme.value = preferences.theme;
+            }
+            
+        } catch (error) {
+            console.warn('Could not load user preferences:', error);
         }
     }
 }

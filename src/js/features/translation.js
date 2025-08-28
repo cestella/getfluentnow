@@ -161,9 +161,14 @@ export class TranslationManager {
                 ? marked.parse(item.feedback) 
                 : item.feedback;
 
+            // Get grade with proper styling
+            const grade = item.grade || 'C'; // Default to C if no grade provided
+            const gradeClass = `grade-${grade.toLowerCase()}`;
+            const gradeHtml = `<span class="grade ${gradeClass}">${grade}</span>`;
+
             sentenceFeedbackHtml += `
                 <div class="sentence-feedback-item">
-                    <h5>Sentence ${item.sentenceIndex + 1}</h5>
+                    <h5>Sentence ${item.sentenceIndex + 1} ${gradeHtml}</h5>
                     <div class="sentence-feedback-original">
                         <strong>Original:</strong> <em>"${item.original}"</em>
                     </div>

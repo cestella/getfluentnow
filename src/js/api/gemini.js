@@ -362,9 +362,21 @@ SENTENCES TO EVALUATE:
 ${sentenceList}
 
 For each sentence, provide:
-1. A reference translation
-2. Brief feedback covering accuracy, grammar, and word choice
-3. Specific suggestions for improvement
+1. A letter grade (A, B, C, D, or F) where:
+   - A = Perfect or near-perfect translation
+   - B = Good translation with minor issues  
+   - C = Acceptable translation with some errors
+   - D = Poor translation with major errors
+   - F = Incorrect or completely wrong translation
+2. A reference translation
+3. Brief feedback covering accuracy, grammar, and word choice
+4. Specific suggestions for improvement
+
+IMPORTANT GUIDELINES:
+- If the student's translation is identical or nearly identical to the original sentence, give it an A grade and praise it as "Excellent work!" or "Perfect translation!"
+- Be encouraging and educational, never overly critical
+- Focus on helping the student learn and improve
+- For high-quality translations, emphasize what they did well
 
 Then provide an overall summary of the student's performance with 2-3 key learning points.
 
@@ -373,6 +385,7 @@ Format your response as JSON with this structure:
   "sentenceEvaluations": [
     {
       "sentenceNumber": 1,
+      "grade": "A",
       "referenceTranslation": "correct translation here",
       "feedback": "brief feedback here"
     }
@@ -407,7 +420,8 @@ Format your response as JSON with this structure:
                     original: pair.original,
                     userTranslation: pair.translation,
                     referenceTranslation: evaluation.referenceTranslation || 'Reference not provided',
-                    feedback: evaluation.feedback || 'Feedback not provided'
+                    feedback: evaluation.feedback || 'Feedback not provided',
+                    grade: evaluation.grade || 'C'
                 };
             });
 

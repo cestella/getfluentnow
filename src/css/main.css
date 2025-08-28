@@ -853,6 +853,33 @@ select:focus {
 }
 
 /* ==============================================
+   Grade Styles
+   ============================================== */
+.grade {
+    display: inline-block;
+    font-weight: bold;
+    font-size: 1.1em;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-right: 8px;
+}
+
+.grade-a, .grade-b {
+    color: #059669;
+    background: rgba(16, 185, 129, 0.1);
+}
+
+.grade-c {
+    color: #d97706;
+    background: rgba(245, 158, 11, 0.1);
+}
+
+.grade-d, .grade-f {
+    color: #dc2626;
+    background: rgba(239, 68, 68, 0.1);
+}
+
+/* ==============================================
    Footer Styles
    ============================================== */
 #community-footer {
